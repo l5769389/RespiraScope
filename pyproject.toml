@@ -1,0 +1,57 @@
+[project]
+name = "RespiraScope"
+version = "0.1.0"
+description = "Breath signal acquisition, filtering, realtime visualization, and record analysis toolkit."
+authors = [
+    { name = "RespiraScope contributors" }
+]
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["breath", "respiration", "signal-processing", "fastapi", "socketio"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "fastapi>=0.116.1,<0.117.0",
+    "matplotlib>=3.10.6,<4.0.0",
+    "numpy>=2.3.3,<3.0.0",
+    "python-socketio>=5.13.0,<6.0.0",
+    "scipy>=1.16.2,<2.0.0",
+    "uvicorn[standard]>=0.35.0,<0.36.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1.0",
+    "pytest>=8.4.0,<9.0.0",
+]
+
+[project.scripts]
+RespiraScope = "ct_breath.main:main"
+
+[tool.uv]
+resolution = "lowest-direct"
+
+[tool.uv.build-backend]
+module-name = "ct_breath"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+norecursedirs = [".venv", "dist", "build", "frontend-lab", "frontend-monitor"]
+
+[[tool.uv.index]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Breath Guide</title>
+    <link rel="stylesheet" href="./styles.css?v=guide-20260511-1" />
+  </head>
+  <body>
+    <main class="guide-shell">
+      <header class="guide-header">
+        <div>
+          <span class="eyebrow" data-i18n="app.kicker">Guide</span>
+          <h1 data-i18n="app.title">配置与使用说明</h1>
+          <p data-i18n="app.subtitle">面向部署和日常使用的基础说明。</p>
+        </div>
+      </header>
+
+      <section class="panel runtime-panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="runtime.kicker">Runtime</span>
+            <h2 data-i18n="runtime.title">当前运行摘要</h2>
+          </div>
+        </div>
+        <div id="runtimeGrid" class="runtime-grid"></div>
+      </section>
+
+      <section class="guide-layout">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="config.kicker">Config</span>
+              <h2 data-i18n="config.title">配置项作用</h2>
+            </div>
+          </div>
+          <div id="configTable" class="table-list"></div>
+        </section>
+
+        <aside class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="quick.kicker">Quick Start</span>
+              <h2 data-i18n="quick.title">基础使用流程</h2>
+            </div>
+          </div>
+          <ol id="usageSteps" class="steps"></ol>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="notes.kicker">Notes</span>
+            <h2 data-i18n="notes.title">常见判断</h2>
+          </div>
+        </div>
+        <div id="notesList" class="notes-list"></div>
+      </section>
+    </main>
+
+    <script src="/runtime-config.js"></script>
+    <script type="module" src="./app.js?v=guide-20260511-1"></script>
+  </body>
+</html>

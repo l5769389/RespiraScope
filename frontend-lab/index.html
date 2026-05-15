@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mock Signal Setup</title>
+    <link rel="stylesheet" href="./styles.css?v=lab-console-20260515-workbench" />
+  </head>
+  <body>
+    <main class="lab-shell">
+      <header class="lab-topbar">
+        <div>
+          <span class="eyebrow" data-i18n="app.kicker">Simulation Console</span>
+          <h1 data-i18n="app.title">模拟信号设置</h1>
+          <p data-i18n="app.subtitle">模拟源、处理参数和波形预览。</p>
+        </div>
+      </header>
+
+      <section class="lab-workspace">
+        <section class="panel demo-panel">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker" data-i18n="demo.kicker">预设波形</span>
+              <h2 data-i18n="demo.title">呼吸波形示例</h2>
+            </div>
+            <div class="demo-heading-actions">
+              <p data-i18n="demo.subtitle">不同模拟参数下的原始信号形态。</p>
+              <button id="toggleDemoGridBtn" class="secondary demo-toggle" type="button" data-i18n="demo.expand">展开全部</button>
+            </div>
+          </div>
+          <div id="scenarioDemoGrid" class="demo-grid"></div>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="chart-header">
+            <div>
+              <span class="section-kicker" data-i18n="chart.kicker">输出</span>
+              <h2 data-i18n="chart.title">波形预览</h2>
+            </div>
+            <div class="chart-side">
+              <div class="metrics">
+                <div>
+                  <strong data-i18n="metric.bpm">BPM</strong>
+                  <span id="bpmMetric">-</span>
+                </div>
+                <div>
+                  <strong data-i18n="metric.quality">Quality</strong>
+                  <span id="qualityMetric">-</span>
+                </div>
+                <div>
+                  <strong data-i18n="metric.breaths">Breaths</strong>
+                  <span id="countMetric">-</span>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-item raw" data-i18n="chart.raw">raw</span>
+                <span class="legend-item filtered" data-i18n="chart.filtered">filtered</span>
+                <span class="legend-item peak" data-i18n="chart.peaks">peaks</span>
+                <span class="legend-item valley" data-i18n="chart.valleys">valleys</span>
+              </div>
+            </div>
+          </div>
+          <div class="chart-frame">
+            <canvas id="chartCanvas" width="1500" height="430"></canvas>
+            <div id="chartEmpty" class="chart-empty" data-i18n="chart.empty">暂无预览数据。</div>
+          </div>
+        </section>
+
+        <aside class="panel control-panel">
+          <div class="panel-block">
+            <div class="section-heading compact">
+              <div>
+                <span class="section-kicker" data-i18n="panel.mockKicker">Mock Signal</span>
+                <h2 data-i18n="panel.mockTitle">模拟参数</h2>
+              </div>
+            </div>
+            <div class="controls mock-controls">
+              <label class="wide">
+                <span data-i18n="field.scenario">模拟预设</span>
+                <select id="scenarioSelect"></select>
+              </label>
+              <label>
+                <span data-i18n="field.bpm">BPM</span>
+                <input id="bpmInput" type="number" min="3" max="60" step="0.1" />
+              </label>
+              <label>
+                <span data-i18n="field.amplitude">Amplitude</span>
+                <input id="amplitudeInput" type="number" min="0" max="500" step="1" />
+              </label>
+              <label>
+                <span data-i18n="field.noise">Noise</span>
+                <input id="noiseInput" type="number" min="0" max="200" step="0.5" />
+              </label>
+              <label>
+                <span data-i18n="field.irregularity">Irregularity</span>
+                <input id="irregularityInput" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label>
+                <span data-i18n="field.seconds">Seconds</span>
+                <input id="secondsInput" type="number" min="1" max="300" step="1" value="40" />
+              </label>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <div class="section-heading compact">
+              <div>
+                <span class="section-kicker" data-i18n="panel.filterKicker">Processing</span>
+                <h2 data-i18n="panel.filterTitle">处理参数</h2>
+              </div>
+            </div>
+            <div class="controls filter-controls">
+              <label>
+                <span data-i18n="field.lowBpm">Low BPM</span>
+                <input id="lowBpmInput" type="number" min="3" max="60" step="0.1" value="6" />
+              </label>
+              <label>
+                <span data-i18n="field.highBpm">High BPM</span>
+                <input id="highBpmInput" type="number" min="3" max="60" step="0.1" value="40" />
+              </label>
+              <label>
+                <span data-i18n="field.order">Order</span>
+                <input id="orderInput" type="number" min="1" max="5" step="1" value="2" />
+              </label>
+              <label>
+                <span data-i18n="field.sigma">Gaussian Sigma</span>
+                <input id="sigmaInput" type="number" min="0.1" max="100" step="0.1" value="1.5" />
+              </label>
+              <label>
+                <span data-i18n="field.peakRatio">Peak Ratio</span>
+                <input id="peakRatioInput" type="number" min="0.1" max="1" step="0.05" value="0.25" />
+              </label>
+              <label class="checkbox-row">
+                <input id="autoPeakInput" type="checkbox" checked />
+                <span data-i18n="field.autoPeak">Auto peak detection</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="applyMockBtn" class="secondary" data-i18n="button.applyMock">应用到模拟源</button>
+            <button id="previewBtn" data-i18n="button.preview">生成预览</button>
+            <span id="statusText"></span>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script src="/runtime-config.js"></script>
+    <script type="module" src="./app.js?v=lab-console-20260515-workbench"></script>
+  </body>
+</html>

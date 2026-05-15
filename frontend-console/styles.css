@@ -1,0 +1,256 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7f9;
+  --panel: #ffffff;
+  --line: #d9e2ec;
+  --line-strong: #b8c7d8;
+  --text: #102033;
+  --muted: #65758a;
+  --blue: #2563eb;
+  --blue-strong: #1d4ed8;
+  --blue-soft: #edf4ff;
+  --teal: #0f8f86;
+  --shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #edf3f8 0%, #f7fafc 46%, #f2f6fa 100%);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.console-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 7px;
+  width: min(1880px, calc(100vw - 16px));
+  height: 100vh;
+  margin: 0 auto;
+  padding: 6px 0 8px;
+}
+
+.console-topbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.console-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 210px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #0f8f86 100%);
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18);
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.console-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.language-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.language-field select {
+  height: 32px;
+  min-width: 106px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #102033;
+  font: inherit;
+  outline: none;
+}
+
+.language-field select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 2px;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  color: #0b1625;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.tab-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 4px;
+  background: #f3f7fb;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+}
+
+.tab-button {
+  height: 32px;
+  min-width: 92px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #344054;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.tab-button:hover {
+  color: #102033;
+  background: #ffffff;
+}
+
+.tab-button.active {
+  color: #ffffff;
+  background: var(--blue-strong);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+}
+
+.tab-button[hidden] {
+  display: none;
+}
+
+.tab-stage {
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.tab-frame {
+  display: none;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f4f7f9;
+}
+
+.tab-frame.active {
+  display: block;
+}
+
+.disabled-panel {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.disabled-panel h2 {
+  font-size: 18px;
+}
+
+.disabled-panel p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .console-shell {
+    display: block;
+    width: min(100vw - 16px, 1760px);
+    height: auto;
+  }
+
+  .console-topbar {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .console-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .language-field select {
+    width: 100%;
+  }
+
+  .tab-list {
+    display: flex;
+    width: 100%;
+  }
+
+  .tab-button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .tab-stage {
+    height: calc(100vh - 176px);
+    margin-top: 10px;
+  }
+}

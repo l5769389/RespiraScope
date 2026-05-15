@@ -1,0 +1,32 @@
+.venv/
+__pycache__/
+.pytest_cache/
+build/
+dist/
+logs/
+*.spec
+*.egg-info/
+
+# Editor and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Python caches and coverage
+*.py[cod]
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime files
+*.log
+records/
+breath-file/
+config/*.toml
+!config/*.example.toml
+
+# Temporary files
+*.tmp
+*.bak

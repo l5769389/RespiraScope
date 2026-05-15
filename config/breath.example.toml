@@ -1,0 +1,32 @@
+[mock]
+# Enable the built-in simulated breath signal server and /mock/* APIs.
+enabled = true
+bind_host = "0.0.0.0"
+
+[sensor]
+# Breath device TCP stream. When mock.enabled = true, this is also the local
+# simulated signal port.
+host = "localhost"
+port = 8088
+
+[backend]
+host = "0.0.0.0"
+port = 8000
+
+[console]
+# Single frontend web console. It contains Breath Monitor, Mock Signal Setup,
+# and the usage guide, so dev/prod only start one frontend server.
+enabled = true
+host = "127.0.0.1"
+port = 5175
+
+[lab]
+enabled = true
+
+[monitor]
+enabled = true
+
+[record]
+# Extra samples kept before Record Start and after Record End.
+pre_points = 100
+post_points = 100

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Breath Integration API</title>
+    <link rel="stylesheet" href="./styles.css?v=api-docs-20260511-2" />
+  </head>
+  <body>
+    <main class="api-shell">
+      <header class="api-header">
+        <div>
+          <span class="eyebrow" data-i18n="app.kicker">Integration</span>
+          <h1 data-i18n="app.title">呼吸系统对外接口说明</h1>
+          <p data-i18n="app.subtitle">只保留新系统集成需要的流程、字段和传感器输入格式。</p>
+        </div>
+      </header>
+
+      <section class="panel runtime-panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="runtime.kicker">Entry</span>
+            <h2 data-i18n="runtime.title">对接入口</h2>
+          </div>
+        </div>
+        <div id="runtimeGrid" class="runtime-grid"></div>
+      </section>
+
+      <section class="api-layout">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="flow.kicker">Flow</span>
+              <h2 data-i18n="flow.title">推荐接入流程</h2>
+            </div>
+          </div>
+          <ol id="flowList" class="steps"></ol>
+        </section>
+
+        <aside class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="socket.kicker">Socket.IO</span>
+              <h2 data-i18n="socket.title">实时数据订阅</h2>
+            </div>
+          </div>
+          <div id="socketSummary" class="summary-list"></div>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="payload.kicker">Payload</span>
+            <h2 data-i18n="payload.title">后端对外实时字段</h2>
+          </div>
+        </div>
+        <div id="payloadList" class="payload-list"></div>
+      </section>
+
+      <section class="api-layout lower-layout">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="rest.kicker">REST</span>
+              <h2 data-i18n="rest.title">流程接口</h2>
+            </div>
+          </div>
+          <div id="endpointTable" class="endpoint-table"></div>
+        </section>
+
+        <aside class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow" data-i18n="sensor.kicker">Sensor</span>
+              <h2 data-i18n="sensor.title">传感器输入数据</h2>
+            </div>
+          </div>
+          <div id="sensorList" class="summary-list"></div>
+          <pre class="code-block"><code id="sensorExample"></code></pre>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="filter.kicker">Request</span>
+            <h2 data-i18n="filter.title">请求字段</h2>
+          </div>
+        </div>
+        <div id="filterTable" class="field-table"></div>
+      </section>
+
+      <section class="panel record-panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" data-i18n="record.kicker">Record</span>
+            <h2 data-i18n="record.title">录制文件字段</h2>
+          </div>
+        </div>
+        <div id="recordList" class="summary-list record-list"></div>
+        <pre class="code-block"><code id="recordExample"></code></pre>
+      </section>
+    </main>
+
+    <script src="/runtime-config.js"></script>
+    <script type="module" src="./app.js?v=api-docs-20260511-2"></script>
+  </body>
+</html>
