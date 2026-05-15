@@ -35,6 +35,16 @@ Breath Monitor 面向实际使用者，展示后端实时推送的原始呼吸�
 
 ![Breath Record](screenshots/breath-record.png)
 
+### 异常信号处理
+
+异常信号处理用于观察咳嗽、突发干扰和不规则呼吸片段对实时波形、滤波结果、波峰波谷识别和 BPM 指标的影响，便于调试算法鲁棒性。
+
+![Abnormal Respiratory Signals](<screenshots/abnormal respiratory signals.png>)
+
+咳嗽伪影场景展示了短时强扰动下的波形变化和滤波表现，可用于验证异常片段识别、回看和记录复盘效果。
+
+![Cough Artifact](screenshots/cough-artifact.png)
+
 ## 软件结构
 
 RespiraScope 由后端采集处理服务、统一 Web Console、模拟传感器和外部配置文件组成。
