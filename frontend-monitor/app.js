@@ -1,7 +1,7 @@
-import { createChartModule } from "./modules/chart.js";
-import { createRecordModule } from "./modules/record.js";
-import { createSocketModule } from "./modules/socket.js";
-import { createStatusModule } from "./modules/status.js";
+import { createChartModule } from "./modules/chart.js?v=monitor-scan-20260525-11";
+import { createRecordModule } from "./modules/record.js?v=monitor-scan-20260525-11";
+import { createSocketModule } from "./modules/socket.js?v=monitor-scan-20260525-11";
+import { createStatusModule } from "./modules/status.js?v=monitor-scan-20260525-11";
 
 const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
 function isLoopbackHost(host) {
@@ -42,12 +42,16 @@ const Y_AXIS_PADDING_RATIO = 0.12;
 const Y_AXIS_MIN_SPAN = 80;
 const RECORD_RANGE_ACTIVE_COLOR = "rgba(245, 158, 11, 0.16)";
 const RECORD_RANGE_DONE_COLOR = "rgba(20, 184, 166, 0.12)";
+const SCAN_RANGE_ACTIVE_COLOR = "rgba(37, 99, 235, 0.2)";
+const SCAN_RANGE_DONE_COLOR = "rgba(37, 99, 235, 0.14)";
 const TRANSLATIONS = {
   zh: {
     "monitor.title": "呼吸监测",
     "language.label": "语言",
     "button.startMonitoring": "开始监测",
     "button.recordStart": "开始记录",
+    "button.scanStart": "开始扫描",
+    "button.scanEnd": "结束扫描",
     "button.recordEnd": "结束记录",
     "button.saveRecord": "保存记录",
     "button.loadRecord": "加载记录",
@@ -70,6 +74,7 @@ const TRANSLATIONS = {
     "legend.peak": "波峰",
     "legend.valley": "波谷",
     "legend.recorded": "记录区间",
+    "legend.scan": "扫描区间",
     "statusPanel.status": "状态",
     "statusPanel.stability": "稳定性",
     "statusPanel.intervalCv": "间隔 CV",
@@ -128,6 +133,9 @@ const TRANSLATIONS = {
     "record.index.empty": "索引 -",
     "record.index.range": "记录 {start} - {end}",
     "record.index.rangeWithFile": "记录 {start} - {end} / 文件 {fileStart} - {fileEnd}",
+    "record.scans.empty": "扫描 -",
+    "record.scans.count": "{count} 次扫描",
+    "record.scans.detail": "{count} 次扫描：{ranges}",
     "record.time.empty": "时间 -",
     "record.time.range": "时间 {start} - {end}",
     "record.points": "{count} 点",
@@ -136,6 +144,8 @@ const TRANSLATIONS = {
     "record.range.recording": "记录中",
     "record.range.postCapture": "后置采集中",
     "record.range.recorded": "已记录",
+    "record.range.scan": "扫描 #{index}",
+    "record.range.scanActive": "扫描 #{index} 中",
     "duration.seconds": "{seconds}s",
     "duration.minutesSeconds": "{minutes}m {seconds}s",
   },
@@ -144,6 +154,8 @@ const TRANSLATIONS = {
     "language.label": "Language",
     "button.startMonitoring": "Start Monitoring",
     "button.recordStart": "Record Start",
+    "button.scanStart": "Scan Start",
+    "button.scanEnd": "Scan End",
     "button.recordEnd": "Record End",
     "button.saveRecord": "Save Record",
     "button.loadRecord": "Load Record",
@@ -166,6 +178,7 @@ const TRANSLATIONS = {
     "legend.peak": "Peak",
     "legend.valley": "Valley",
     "legend.recorded": "Recorded range",
+    "legend.scan": "Scan range",
     "statusPanel.status": "Status",
     "statusPanel.stability": "Stability",
     "statusPanel.intervalCv": "Interval CV",
@@ -224,6 +237,9 @@ const TRANSLATIONS = {
     "record.index.empty": "Index -",
     "record.index.range": "Record {start} - {end}",
     "record.index.rangeWithFile": "Record {start} - {end} / File {fileStart} - {fileEnd}",
+    "record.scans.empty": "Scans -",
+    "record.scans.count": "{count} scans",
+    "record.scans.detail": "{count} scans: {ranges}",
     "record.time.empty": "Time -",
     "record.time.range": "Time {start} - {end}",
     "record.points": "{count} points",
@@ -232,6 +248,8 @@ const TRANSLATIONS = {
     "record.range.recording": "Recording",
     "record.range.postCapture": "Post Capture",
     "record.range.recorded": "Recorded",
+    "record.range.scan": "Scan #{index}",
+    "record.range.scanActive": "Scan #{index}",
     "duration.seconds": "{seconds}s",
     "duration.minutesSeconds": "{minutes}m {seconds}s",
   },
@@ -274,6 +292,7 @@ const state = {
   peaks: [],
   valleys: [],
   recording: false,
+  resettingRecord: false,
   activeRecord: null,
   lastRecord: null,
   metrics: {
@@ -289,6 +308,8 @@ const dom = {
   languageSelect: document.querySelector("#languageSelect"),
   startBtn: document.querySelector("#startBtn"),
   recordStartBtn: document.querySelector("#recordStartBtn"),
+  scanStartBtn: document.querySelector("#scanStartBtn"),
+  scanEndBtn: document.querySelector("#scanEndBtn"),
   recordEndBtn: document.querySelector("#recordEndBtn"),
   pauseBtn: document.querySelector("#pauseBtn"),
   resetBtn: document.querySelector("#resetBtn"),
@@ -313,6 +334,7 @@ const dom = {
   recordStatus: document.querySelector("#recordStatus"),
   recordDuration: document.querySelector("#recordDuration"),
   recordIndexRange: document.querySelector("#recordIndexRange"),
+  recordScanRange: document.querySelector("#recordScanRange"),
   recordTimeRange: document.querySelector("#recordTimeRange"),
   recordPointCount: document.querySelector("#recordPointCount"),
   waveChart: document.querySelector("#waveChart"),
@@ -431,17 +453,27 @@ function togglePause() {
   }
 }
 
-function resetData() {
+async function resetBackendRecord() {
+  const response = await fetch(`${API_BASE}/record/reset`, { method: "POST" });
+  if (!response.ok) {
+    throw new Error(`record/reset ${response.status}`);
+  }
+}
+
+async function resetData({ syncBackend = false } = {}) {
+  state.resettingRecord = syncBackend;
+  if (syncBackend) {
+    recordApi.updateRecordButtons();
+  }
   statusApi.clearDataWatch();
-  recordApi.clearPostRecordTimer();
   state.raw = [];
   state.filtered = [];
   state.peaks = [];
   state.valleys = [];
-  state.recording = false;
+  state.paused = false;
   state.followLive = true;
-  state.activeRecord = null;
-  state.lastRecord = null;
+  state.ignoreDataZoomEvent = false;
+  state.renderScheduled = false;
   state.pendingReviewRange = null;
   state.lastRenderMode = null;
   state.sequenceOrigin = null;
@@ -454,16 +486,27 @@ function resetData() {
     breath_count: 0,
     interval_cv: null,
   };
-  recordApi.setRecordSectionVisible(false);
+  dom.pauseBtn.textContent = t("button.pauseView");
+  recordApi.resetRecordState();
   dom.recordFileValue.dataset.recordFileKey = "record.file.none";
   dom.recordFileValue.textContent = t("record.file.none");
   chartApi.clearCharts();
-  recordApi.updateRecordButtons();
   chartApi.updateFollowButton();
   statusApi.updateStats();
   chartApi.scheduleRender(true);
-  if (state.running) {
-    statusApi.startDataWatch();
+
+  try {
+    if (syncBackend) {
+      await resetBackendRecord();
+    }
+  } catch (error) {
+    recordApi.setRecordStatus("Local Record");
+  } finally {
+    state.resettingRecord = false;
+    recordApi.updateRecordButtons();
+    if (state.running) {
+      statusApi.startDataWatch();
+    }
   }
 }
 
@@ -484,6 +527,8 @@ const moduleContext = {
   RECORD_PRE_POINTS,
   RECORD_RANGE_ACTIVE_COLOR,
   RECORD_RANGE_DONE_COLOR,
+  SCAN_RANGE_ACTIVE_COLOR,
+  SCAN_RANGE_DONE_COLOR,
   SOCKET_URL,
   Y_AXIS_MIN_SPAN,
   Y_AXIS_PADDING_RATIO,
@@ -559,6 +604,16 @@ dom.startBtn.addEventListener("click", () => {
   });
 });
 dom.recordStartBtn.addEventListener("click", recordApi.startRecord);
+dom.scanStartBtn.addEventListener("click", () => {
+  recordApi.startScan().catch(() => {
+    recordApi.setRecordStatus("Local Record");
+  });
+});
+dom.scanEndBtn.addEventListener("click", () => {
+  recordApi.endScan().catch(() => {
+    recordApi.setRecordStatus("Local Record");
+  });
+});
 dom.recordEndBtn.addEventListener("click", () => {
   recordApi.endRecord().catch(() => {
     recordApi.setRecordStatus("Live Capture");
@@ -573,7 +628,7 @@ dom.loadRecordInput.addEventListener("change", (event) => {
   recordApi.loadRecordFile(event.target.files?.[0]);
 });
 dom.pauseBtn.addEventListener("click", togglePause);
-dom.resetBtn.addEventListener("click", resetData);
+dom.resetBtn.addEventListener("click", () => resetData({ syncBackend: true }));
 dom.followBtn.addEventListener("click", () => {
   state.followLive = true;
   state.pendingReviewRange = null;
@@ -620,6 +675,4 @@ window.addEventListener("message", (event) => {
 });
 
 translatePage(language);
-recordApi.updateRecordButtons();
-chartApi.updateFollowButton();
-chartApi.scheduleRender(true);
+resetData({ syncBackend: true });

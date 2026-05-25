@@ -35,3 +35,4 @@ class DataSender:
             await send_type_data('peak', self.queue_manager.peak_queue)
             await send_type_data('valley', self.queue_manager.valley_queue)
             await send_type_data('metrics', self.queue_manager.metrics_queue)
+            await send_type_data('signal_quality', self.queue_manager.signal_quality_queue)

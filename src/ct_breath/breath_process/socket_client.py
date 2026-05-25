@@ -2,6 +2,8 @@ import asyncio
 import time
 from typing import Callable, Optional
 
+from ct_breath.time_utils import iso_time
+
 
 class AsyncSocketClient:
     def __init__(
@@ -31,7 +33,6 @@ class AsyncSocketClient:
                 self.port,
             )
             print(f"Connected to server {self.host}:{self.port}")
-            self.running = True
             self.connected = True
             self.last_error = None
             self.last_connected_at = time.time()
@@ -43,9 +44,12 @@ class AsyncSocketClient:
             return False
 
     async def start_receiving(self):
-        while True:
+        self.running = True
+        while self.running:
             try:
                 if not await self.connect():
+                    if not self.running:
+                        break
                     print(f"Failed to connect, retrying in {self.reconnect_delay} seconds...")
                     await asyncio.sleep(self.reconnect_delay)
                     continue
@@ -115,9 +119,9 @@ class AsyncSocketClient:
             "connected": self.connected,
             "received_count": self.received_count,
             "last_error": self.last_error,
-            "last_connected_at": self.last_connected_at,
-            "last_disconnected_at": self.last_disconnected_at,
-            "last_received_at": self.last_received_at,
+            "last_connected_at": iso_time(self.last_connected_at),
+            "last_disconnected_at": iso_time(self.last_disconnected_at),
+            "last_received_at": iso_time(self.last_received_at),
             "seconds_since_last_data": (
                 round(now - self.last_received_at, 3)
                 if self.last_received_at is not None

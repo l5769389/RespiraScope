@@ -57,9 +57,9 @@ class SocketClientStatus(BaseModel):
     connected: bool
     received_count: int
     last_error: Optional[str] = None
-    last_connected_at: Optional[float] = None
-    last_disconnected_at: Optional[float] = None
-    last_received_at: Optional[float] = None
+    last_connected_at: Optional[str] = None
+    last_disconnected_at: Optional[str] = None
+    last_received_at: Optional[str] = None
     seconds_since_last_data: Optional[float] = None
 
 
@@ -68,7 +68,7 @@ class DataReceiverStatus(BaseModel):
     sensor_port: int
     sequence_number: int
     received_count: int
-    last_data_at: Optional[float] = None
+    last_data_at: Optional[str] = None
     seconds_since_last_data: Optional[float] = None
     socket: SocketClientStatus
 
@@ -79,6 +79,12 @@ class QueueStatus(BaseModel):
     peaks: int
     valleys: int
     metrics: int
+    signal_quality: int
+
+
+class QueueStats(BaseModel):
+    dropped: dict[str, int]
+    high_watermark: dict[str, int]
 
 
 class RecordRuntimeStatus(BaseModel):
@@ -91,13 +97,21 @@ class RecordRuntimeStatus(BaseModel):
     record_end_sequence: Optional[int] = None
     capture_start_sequence: Optional[int] = None
     capture_end_sequence: Optional[int] = None
+    scan_active: bool = False
+    active_scan: Optional[dict] = None
+    scans: list[dict] = Field(default_factory=list)
 
 
 class StreamStatus(BaseModel):
     started: bool
+    state: str = "idle"
+    last_error: Optional[str] = None
+    tasks: dict[str, dict[str, bool]] = Field(default_factory=dict)
     receiver: DataReceiverStatus
     queues: QueueStatus
+    queue_stats: QueueStats
     record: RecordRuntimeStatus
+    signal_quality: dict = Field(default_factory=dict)
     filter_config: FilterConfig
 
 

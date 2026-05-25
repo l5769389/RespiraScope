@@ -41,7 +41,7 @@ butterworth_filter(..., rt=True)
 
 ## 离线滤波
 
-Monitor 点击 `Record End` 后，会把 start 到 end 之间的原始数据发给后端 `/applyFilter`，由后端重新做一次离线滤波。
+Monitor 点击 `Record End` 后，会调用后端 `/record/end`。后端结束记录、等待 end 后辅助点采集完成，然后对本次记录的原始数据重新做一次离线滤波并返回结果。`/applyFilter` 仍保留给外部系统复算任意历史 raw_data 使用。
 
 离线模式调用：
 

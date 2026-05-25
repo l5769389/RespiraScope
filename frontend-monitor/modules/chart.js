@@ -6,6 +6,8 @@ export function createChartModule(ctx) {
     LIVE_RIGHT_PADDING_RATIO,
     RECORD_RANGE_ACTIVE_COLOR,
     RECORD_RANGE_DONE_COLOR,
+    SCAN_RANGE_ACTIVE_COLOR,
+    SCAN_RANGE_DONE_COLOR,
     Y_AXIS_MIN_SPAN,
     Y_AXIS_PADDING_RATIO,
     dom,
@@ -262,35 +264,66 @@ export function createChartModule(ctx) {
     }
 
     const active = recordRange.active;
+    const recordStyle = {
+      color: active ? RECORD_RANGE_ACTIVE_COLOR : RECORD_RANGE_DONE_COLOR,
+      borderColor: active ? "rgba(245, 158, 11, 0.32)" : "rgba(20, 184, 166, 0.28)",
+      borderWidth: 1,
+    };
+    const scanStyle = (isActive) => ({
+      color: isActive ? SCAN_RANGE_ACTIVE_COLOR : SCAN_RANGE_DONE_COLOR,
+      borderColor: isActive ? "rgba(37, 99, 235, 0.42)" : "rgba(37, 99, 235, 0.3)",
+      borderWidth: 1,
+    });
+    const areaLabel = (label, color, borderColor) => ({
+      show: true,
+      formatter: label,
+      position: "insideTop",
+      color,
+      fontSize: 12,
+      fontWeight: 700,
+      padding: [3, 8],
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      borderColor,
+      borderWidth: 1,
+      borderRadius: 4,
+    });
+    const areaData = [
+      [
+        {
+          xAxis: recordRange.minX,
+          itemStyle: recordStyle,
+          label: areaLabel(
+            recordRange.label,
+            active ? "#92400e" : "#0f766e",
+            active ? "rgba(245, 158, 11, 0.32)" : "rgba(20, 184, 166, 0.28)",
+          ),
+        },
+        { xAxis: recordRange.maxX },
+      ],
+    ];
+
+    for (const scan of recordRange.scans ?? []) {
+      areaData.push([
+        {
+          xAxis: scan.minX,
+          itemStyle: scanStyle(scan.active),
+          label: areaLabel(scan.label, "#1d4ed8", "rgba(37, 99, 235, 0.32)"),
+        },
+        { xAxis: scan.maxX },
+      ]);
+    }
+
     return {
       silent: true,
       itemStyle: {
-        color: active ? RECORD_RANGE_ACTIVE_COLOR : RECORD_RANGE_DONE_COLOR,
-        borderColor: active ? "rgba(245, 158, 11, 0.32)" : "rgba(20, 184, 166, 0.28)",
+        color: RECORD_RANGE_DONE_COLOR,
+        borderColor: "rgba(20, 184, 166, 0.28)",
         borderWidth: 1,
-      },
-      label: {
-        show: true,
-        formatter: recordRange.label,
-        position: "insideTop",
-        color: active ? "#92400e" : "#0f766e",
-        fontSize: 12,
-        fontWeight: 700,
-        padding: [3, 8],
-        backgroundColor: "rgba(255, 255, 255, 0.86)",
-        borderColor: active ? "rgba(245, 158, 11, 0.32)" : "rgba(20, 184, 166, 0.28)",
-        borderWidth: 1,
-        borderRadius: 4,
       },
       emphasis: {
         disabled: true,
       },
-      data: [
-        [
-          { xAxis: recordRange.minX },
-          { xAxis: recordRange.maxX },
-        ],
-      ],
+      data: areaData,
     };
   }
 
@@ -347,6 +380,20 @@ export function createChartModule(ctx) {
       ...recordRange,
       minX: visibleMin,
       maxX: Math.max(visibleMin + 1, visibleMax),
+      scans: (recordRange.scans ?? [])
+        .map((scan) => {
+          const scanMin = Math.max(scan.minX, minX);
+          const scanMax = Math.min(scan.maxX, maxX);
+          if (scanMax < minX || scanMin > maxX) {
+            return null;
+          }
+          return {
+            ...scan,
+            minX: scanMin,
+            maxX: Math.max(scanMin + 1, scanMax),
+          };
+        })
+        .filter(Boolean),
     };
   }
 

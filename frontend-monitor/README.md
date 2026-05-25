@@ -19,7 +19,7 @@ It does not expose mock patient or simulated signal controls.
   recent realtime data.
 - Local segment capture with `Record Start` and `Record End`; captured raw data
   is re-filtered through the backend offline filter when the segment ends.
-- Configurable pre/post record padding. Saved files distinguish redundant
+- Configurable pre/post record padding. Saved files distinguish auxiliary
   `pre` / `post` samples from the true `record` range.
 - Display-only smoothing modes for the filtered waveform.
 - Start-time no-data detection through `/stream/status`, with disabled recording

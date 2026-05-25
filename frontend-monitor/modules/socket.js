@@ -21,7 +21,18 @@ export function createSocketModule(ctx) {
   }
 
   async function startMonitoring() {
-    ctx.resetData();
+    if (state.running) {
+      setConnectionStatus(state.hasReceivedData ? "connection.receiving" : "connection.waiting");
+      recordApi.updateRecordButtons();
+      chartApi.updateFollowButton();
+      chartApi.scheduleRender(true);
+      return {
+        running: true,
+        socketConnected: Boolean(state.socket?.connected),
+      };
+    }
+
+    await ctx.resetData({ syncBackend: true });
     connectSocket();
     state.filterConfig = buildFilterConfig();
     setConnectionStatus("connection.waiting");

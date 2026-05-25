@@ -40,6 +40,7 @@ def lifespan_for(app_config: AppConfig):
 
         finally:
             logger.info("Shutting down application...")
+            await breath_system.stop_system()
 
             for task in tasks:
                 if not task.done():

@@ -139,11 +139,27 @@ button:disabled {
   transform: none;
 }
 
-button.active {
+button.active,
+button.secondary.active {
   border-color: #0f766e;
   background: #0f766e;
+  background-color: #0f766e;
   color: #ffffff;
   box-shadow: none;
+}
+
+button.active:not(:disabled):hover,
+button.secondary.active:not(:disabled):hover {
+  border-color: #0b766d !important;
+  background: #0b766d;
+  background-color: #0b766d !important;
+  color: #ffffff !important;
+}
+
+button.secondary.active {
+  border-color: #0f766e !important;
+  background-color: #0f766e !important;
+  color: #ffffff !important;
 }
 
 select {
@@ -333,6 +349,12 @@ label {
   border-radius: 3px;
   background: #f59e0b;
   opacity: 0.42;
+}
+
+.legend-item.scan::before {
+  border-radius: 3px;
+  background: #2563eb;
+  opacity: 0.5;
 }
 
 .chart {

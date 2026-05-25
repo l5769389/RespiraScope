@@ -97,6 +97,167 @@ export function createRecordModule(ctx) {
     return pointSequence(sorted[sorted.length - 1]);
   }
 
+  function finiteNumber(value) {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  function normalizeScan(scan) {
+    if (!scan) {
+      return null;
+    }
+    const index = finiteNumber(scan.index ?? scan.scan_index);
+    const startSeq = finiteNumber(scan.startSeq ?? scan.start_sequence);
+    const endSeq = finiteNumber(scan.endSeq ?? scan.end_sequence);
+    const backendStartSeq = finiteNumber(scan.backendStartSeq ?? scan.backend_start_sequence);
+    const backendEndSeq = finiteNumber(scan.backendEndSeq ?? scan.backend_end_sequence);
+    return {
+      ...scan,
+      index,
+      startSeq,
+      endSeq,
+      start_sequence: startSeq,
+      end_sequence: endSeq,
+      backendStartSeq,
+      backendEndSeq,
+      backend_start_sequence: backendStartSeq,
+      backend_end_sequence: backendEndSeq,
+    };
+  }
+
+  function backendSequenceToLocal(record, sequence) {
+    const value = finiteNumber(sequence);
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const backendRecordStart = finiteNumber(record?.backendStartSeq ?? record?.backend_start_sequence);
+    const localRecordStart = finiteNumber(record?.startSeq ?? record?.start_sequence);
+    if (backendRecordStart !== undefined && localRecordStart !== undefined) {
+      return value - backendRecordStart + localRecordStart;
+    }
+
+    const origin = finiteNumber(state.sequenceOrigin);
+    return origin === undefined ? value : Math.max(0, value - origin);
+  }
+
+  function applyBackendRecordStatus(record, payload) {
+    if (!record || !payload) {
+      return;
+    }
+    const backendStartSeq = finiteNumber(
+      payload.record_start_sequence ?? payload.recordStartSeq ?? payload.start_sequence ?? payload.startSeq,
+    );
+    const backendEndSeq = finiteNumber(
+      payload.record_end_sequence ?? payload.recordEndSeq ?? payload.end_sequence ?? payload.endSeq,
+    );
+    if (backendStartSeq !== undefined) {
+      record.backendStartSeq = backendStartSeq;
+      record.backend_start_sequence = backendStartSeq;
+    }
+    if (backendEndSeq !== undefined) {
+      record.backendEndSeq = backendEndSeq;
+      record.backend_end_sequence = backendEndSeq;
+    }
+  }
+
+  function mergeBackendScan(record, backendScan, localScan = null) {
+    const backend = normalizeScan(backendScan);
+    if (!backend) {
+      return normalizeScan(localScan);
+    }
+
+    const local = normalizeScan(localScan);
+    const backendStartSeq = backend.backendStartSeq ?? backend.startSeq;
+    const backendEndSeq = backend.backendEndSeq ?? backend.endSeq;
+    const startSeq = local?.startSeq ?? backendSequenceToLocal(record, backendStartSeq);
+    const endSeq = local?.endSeq ?? backendSequenceToLocal(record, backendEndSeq);
+
+    return {
+      ...backend,
+      ...local,
+      index: backend.index ?? local?.index,
+      startSeq,
+      endSeq,
+      start_sequence: startSeq,
+      end_sequence: endSeq,
+      backendStartSeq,
+      backendEndSeq,
+      backend_start_sequence: backendStartSeq,
+      backend_end_sequence: backendEndSeq,
+      auto_closed: backend.auto_closed ?? local?.auto_closed,
+    };
+  }
+
+  function normalizeScans(scans) {
+    if (!Array.isArray(scans)) {
+      return [];
+    }
+    return scans.map(normalizeScan).filter(Boolean).sort((left, right) => {
+      const leftIndex = Number(left.index ?? 0);
+      const rightIndex = Number(right.index ?? 0);
+      return leftIndex - rightIndex;
+    });
+  }
+
+  function nextScanIndex(record) {
+    const indexes = normalizeScans(record.scans)
+      .map((scan) => Number(scan.index))
+      .filter(Number.isFinite);
+    const activeIndex = Number(record.activeScan?.index);
+    if (Number.isFinite(activeIndex)) {
+      indexes.push(activeIndex);
+    }
+    return indexes.length > 0 ? Math.max(...indexes) + 1 : 1;
+  }
+
+  function upsertScan(record, scan) {
+    if (!record || !scan) {
+      return null;
+    }
+    const normalized = normalizeScan(scan);
+    const index = Number(normalized?.index);
+    if (!Number.isFinite(index)) {
+      return normalized;
+    }
+    const scans = normalizeScans(record.scans);
+    const existingIndex = scans.findIndex((item) => Number(item.index) === index);
+    if (existingIndex >= 0) {
+      scans[existingIndex] = {
+        ...scans[existingIndex],
+        ...normalized,
+      };
+    } else {
+      scans.push(normalized);
+    }
+    record.scans = normalizeScans(scans);
+    return normalized;
+  }
+
+  function closeActiveScan(record, endSeq, autoClosed = false) {
+    if (!record?.activeScan) {
+      return null;
+    }
+    const startSeq = finiteNumber(record.activeScan.startSeq ?? record.activeScan.start_sequence);
+    const candidateEndSeq = finiteNumber(endSeq);
+    const normalizedEndSeq =
+      startSeq !== undefined && (candidateEndSeq === undefined || candidateEndSeq < startSeq)
+        ? startSeq
+        : candidateEndSeq;
+    const scan = {
+      ...record.activeScan,
+      endSeq: normalizedEndSeq,
+      end_sequence: normalizedEndSeq,
+      endAt: Date.now(),
+      auto_closed: autoClosed,
+    };
+    record.activeScan = null;
+    return upsertScan(record, scan);
+  }
+
   function hydrateRecordFromState(record) {
     const minSeq = captureStartSequence(record);
     const maxSeq = captureEndSequence(record);
@@ -173,6 +334,7 @@ export function createRecordModule(ctx) {
     if (
       recordKey === "raw" &&
       record.postCapturing &&
+      !record.awaitingBackendEnd &&
       Number.isFinite(endSeq) &&
       accepted.some((point) => pointSequence(point) >= endSeq)
     ) {
@@ -212,7 +374,9 @@ export function createRecordModule(ctx) {
 
   async function startRecord() {
     if (state.recording) {
-      return;
+      updateRecordButtons();
+      updateRecordSummary(state.activeRecord);
+      return state.activeRecord;
     }
 
     clearPostRecordTimer();
@@ -228,7 +392,12 @@ export function createRecordModule(ctx) {
       prePoints: RECORD_PRE_POINTS,
       postPoints: RECORD_POST_POINTS,
       postCapturing: false,
+      awaitingBackendEnd: false,
+      recordStartPending: true,
+      recordStartPromise: null,
       finalizing: false,
+      scans: [],
+      activeScan: null,
       raw: copySeriesRange(state.raw, captureStartSeq, startSeq - 1),
       filtered: copySeriesRange(state.filtered, captureStartSeq, startSeq - 1),
       peaks: copySeriesRange(state.peaks, captureStartSeq, startSeq - 1),
@@ -236,12 +405,111 @@ export function createRecordModule(ctx) {
       metrics: state.metrics,
       filterConfig: state.filterConfig,
     };
+    const record = state.activeRecord;
     state.recording = true;
     setRecordSectionVisible(true);
     updateRecordButtons();
     updateRecordSummary(state.activeRecord);
     chartApi.scheduleRender(true);
-    postRecordEvent("/record/start");
+    record.recordStartPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/record/start`, { method: "POST" });
+        if (!response.ok) {
+          throw new Error(`record/start ${response.status}`);
+        }
+        const result = await response.json();
+        applyBackendRecordStatus(record, result.data?.record ?? result.record);
+      } catch (error) {
+        setRecordStatus("Local Record");
+      } finally {
+        record.recordStartPending = false;
+        if (state.activeRecord === record) {
+          updateRecordButtons();
+          updateRecordSummary(record);
+        }
+      }
+    })();
+    await record.recordStartPromise;
+  }
+
+  async function startScan() {
+    const record = state.activeRecord;
+    const hasRecordEnded =
+      record?.endSeq !== null &&
+      record?.endSeq !== undefined &&
+      Number.isFinite(Number(record.endSeq));
+    if (!state.recording || !record || record.activeScan || hasRecordEnded) {
+      return;
+    }
+
+    const localScan = {
+      index: nextScanIndex(record),
+      startSeq: latestRawSequence() + 1,
+      start_sequence: latestRawSequence() + 1,
+      endSeq: null,
+      end_sequence: null,
+      startAt: Date.now(),
+    };
+    record.activeScan = localScan;
+    updateRecordButtons();
+    updateRecordSummary(record);
+    chartApi.scheduleRender(true);
+
+    try {
+      await record.recordStartPromise?.catch(() => null);
+      const response = await fetch(`${API_BASE}/scan/start`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`scan/start ${response.status}`);
+      }
+      const result = await response.json();
+      const scan = result.data?.scan ?? result.scan;
+      if (scan && state.activeRecord === record) {
+        record.activeScan = mergeBackendScan(record, scan, record.activeScan);
+        updateRecordSummary(record);
+        updateRecordButtons();
+        chartApi.scheduleRender(true);
+      }
+    } catch (error) {
+      if (state.activeRecord === record && record.activeScan === localScan) {
+        record.activeScan = null;
+        updateRecordSummary(record);
+        updateRecordButtons();
+        chartApi.scheduleRender(true);
+      }
+      setRecordStatus("Local Record");
+    }
+  }
+
+  async function endScan() {
+    const record = state.activeRecord;
+    if (!state.recording || !record?.activeScan) {
+      return;
+    }
+
+    closeActiveScan(record, latestRawSequence());
+    const localScans = normalizeScans(record.scans);
+    const localClosedScan = localScans[localScans.length - 1];
+    updateRecordButtons();
+    updateRecordSummary(record);
+    chartApi.scheduleRender(true);
+
+    try {
+      await record.recordStartPromise?.catch(() => null);
+      const response = await fetch(`${API_BASE}/scan/end`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`scan/end ${response.status}`);
+      }
+      const result = await response.json();
+      const scan = result.data?.scan ?? result.scan;
+      if (scan && state.activeRecord === record) {
+        upsertScan(record, mergeBackendScan(record, scan, localClosedScan));
+        updateRecordSummary(record);
+        updateRecordButtons();
+        chartApi.scheduleRender(true);
+      }
+    } catch (error) {
+      setRecordStatus("Local Record");
+    }
   }
 
   async function endRecord() {
@@ -254,12 +522,28 @@ export function createRecordModule(ctx) {
     record.endSeq = latestRawSequence();
     record.captureEndSeq = record.endSeq + RECORD_POST_POINTS;
     record.postCapturing = RECORD_POST_POINTS > 0;
+    record.awaitingBackendEnd = true;
+    closeActiveScan(record, record.endSeq, true);
 
     updateRecordButtons();
     updateRecordSummary(record);
     setRecordStatus(record.postCapturing ? "Post Capture" : "Filtering");
     chartApi.scheduleRender(true);
-    postRecordEvent("/record/end");
+
+    try {
+      const response = await fetch(`${API_BASE}/record/end`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`record/end ${response.status}`);
+      }
+      const result = await response.json();
+      const payload = normalizeRecordEndPayload(result);
+      if (payload) {
+        applyBackendRecordPayload(payload);
+        return;
+      }
+    } catch (error) {
+      record.awaitingBackendEnd = false;
+    }
 
     if (record.postCapturing) {
       clearPostRecordTimer();
@@ -279,6 +563,7 @@ export function createRecordModule(ctx) {
       return;
     }
     record.finalizing = true;
+    closeActiveScan(record, record.endSeq ?? latestRawSequence(), true);
     hydrateRecordFromState(record);
     const actualCaptureEndSeq = latestSequenceFromSeries(record.raw) ?? chartApi.latestSequenceFrom(record);
     if (
@@ -299,10 +584,49 @@ export function createRecordModule(ctx) {
     await finalizeRecord(record);
   }
 
-  function postRecordEvent(path) {
-    fetch(`${API_BASE}${path}`, { method: "POST" }).catch(() => {
-      setRecordStatus("Local Record");
-    });
+  function applyBackendRecordPayload(payload) {
+    const record = normalizeRecordPayload(payload);
+    state.lastRecord = record;
+    state.activeRecord = null;
+    state.recording = false;
+    clearPostRecordTimer();
+    setRecordSectionVisible(true);
+    setRecordStatus(record.filtered.length > 0 ? "Offline Filtered" : "Too Short");
+    updateRecordButtons();
+    updateRecordSummary(record);
+    chartApi.scheduleRender(true);
+    chartApi.renderRecord();
+  }
+
+  function resetRecordState({ hideSection = true } = {}) {
+    clearPostRecordTimer();
+    state.recording = false;
+    state.activeRecord = null;
+    state.lastRecord = null;
+    if (hideSection) {
+      setRecordSectionVisible(false);
+    }
+    dom.scanEndBtn.classList.remove("active");
+    updateRecordSummary(null);
+    setRecordStatus("Idle");
+    updateRecordButtons();
+  }
+
+  function normalizeRecordEndPayload(result) {
+    const nestedRecord = result.data?.record ?? result.record;
+    if (nestedRecord) {
+      return nestedRecord;
+    }
+    if (!Array.isArray(result.data)) {
+      return null;
+    }
+    return {
+      ...result,
+      filtered_data: result.data,
+      filter_params: result.filter_config,
+      start_time: result.record_time?.start_time,
+      end_time: result.record_time?.end_time,
+    };
   }
 
   async function finalizeRecord(record) {
@@ -389,9 +713,28 @@ export function createRecordModule(ctx) {
       state.activeRecord?.endSeq !== null &&
       state.activeRecord?.endSeq !== undefined &&
       Number.isFinite(Number(state.activeRecord.endSeq));
-    dom.recordStartBtn.disabled = state.recording || !state.running || !state.hasReceivedData;
-    dom.recordEndBtn.disabled = !state.recording || activeRecordEnded;
-    dom.saveRecordBtn.disabled = state.recording || !state.lastRecord;
+    dom.recordStartBtn.disabled =
+      state.resettingRecord ||
+      state.recording ||
+      !state.running ||
+      !state.hasReceivedData;
+    dom.scanStartBtn.disabled =
+      state.resettingRecord ||
+      !state.recording ||
+      activeRecordEnded ||
+      Boolean(state.activeRecord?.activeScan);
+    dom.scanEndBtn.disabled =
+      state.resettingRecord ||
+      !state.recording ||
+      activeRecordEnded ||
+      !state.activeRecord?.activeScan;
+    dom.scanEndBtn.classList.toggle("active", Boolean(state.activeRecord?.activeScan));
+    dom.recordEndBtn.disabled =
+      state.resettingRecord ||
+      !state.recording ||
+      activeRecordEnded ||
+      Boolean(state.activeRecord?.recordStartPending);
+    dom.saveRecordBtn.disabled = state.resettingRecord || state.recording || !state.lastRecord;
     if (!state.recording && !state.lastRecord) {
       setRecordStatus("Idle");
     } else if (state.activeRecord?.postCapturing) {
@@ -469,6 +812,27 @@ export function createRecordModule(ctx) {
     return recordText;
   }
 
+  function scanSummaryText(record) {
+    const scans = normalizeScans([
+      ...(record?.scans ?? []),
+      ...(record?.activeScan ? [record.activeScan] : []),
+    ]);
+    if (scans.length === 0) {
+      return t("record.scans.empty");
+    }
+
+    const ranges = scans
+      .map((scan) => {
+        const startSeq = Number(scan.startSeq ?? scan.start_sequence);
+        const endSeq = Number(scan.endSeq ?? scan.end_sequence);
+        const start = Number.isFinite(startSeq) ? Math.round(startSeq) : "?";
+        const end = Number.isFinite(endSeq) ? Math.round(endSeq) : "...";
+        return `#${scan.index ?? "?"} ${start}-${end}`;
+      })
+      .join(", ");
+    return t("record.scans.detail", { count: scans.length, ranges });
+  }
+
   function recordTimeRangeText(record) {
     const startAt = normalizeTimestamp(record.startAt, NaN);
     const endAt = normalizeTimestamp(record.endAt ?? Date.now(), NaN);
@@ -485,6 +849,7 @@ export function createRecordModule(ctx) {
     if (!record) {
       dom.recordDuration.textContent = t("duration.seconds", { seconds: 0 });
       dom.recordIndexRange.textContent = t("record.index.empty");
+      dom.recordScanRange.textContent = t("record.scans.empty");
       dom.recordTimeRange.textContent = t("record.time.empty");
       dom.recordPointCount.textContent = t("record.points", { count: 0 });
       return;
@@ -497,6 +862,7 @@ export function createRecordModule(ctx) {
     const postCount = record.raw.filter((point) => segmentForSequence(pointSequence(point), record) === "post").length;
     dom.recordDuration.textContent = formatDuration(endAt - startAt);
     dom.recordIndexRange.textContent = sequenceRangeText(record);
+    dom.recordScanRange.textContent = scanSummaryText(record);
     dom.recordTimeRange.textContent = recordTimeRangeText(record);
     dom.recordPointCount.textContent =
       preCount > 0 || postCount > 0
@@ -531,10 +897,27 @@ export function createRecordModule(ctx) {
     if (sequence < Number(record.startSeq)) {
       return "pre";
     }
-    if (Number.isFinite(Number(record.endSeq)) && sequence > Number(record.endSeq)) {
+    const hasEndSeq =
+      record?.endSeq !== null &&
+      record?.endSeq !== undefined &&
+      Number.isFinite(Number(record.endSeq));
+    if (hasEndSeq && sequence > Number(record.endSeq)) {
       return "post";
     }
     return "record";
+  }
+
+  function scanIndexesForSequence(sequence, record) {
+    if (!Number.isFinite(sequence)) {
+      return [];
+    }
+    return normalizeScans(record?.scans)
+      .filter((scan) => {
+        const startSeq = Number(scan.startSeq ?? scan.start_sequence);
+        const endSeq = Number(scan.endSeq ?? scan.end_sequence);
+        return Number.isFinite(startSeq) && Number.isFinite(endSeq) && sequence >= startSeq && sequence <= endSeq;
+      })
+      .map((scan) => scan.index);
   }
 
   function annotateSeriesForRecord(series, record) {
@@ -542,6 +925,7 @@ export function createRecordModule(ctx) {
       sequence: point[0],
       value: point[1],
       segment: segmentForSequence(point[0], record),
+      scan_indexes: scanIndexesForSequence(point[0], record),
     }));
   }
 
@@ -550,17 +934,17 @@ export function createRecordModule(ctx) {
       pre: {
         start_sequence: captureStartSequence(record),
         end_sequence: Number(record.startSeq) - 1,
-        redundant: true,
+        auxiliary: true,
       },
       record: {
         start_sequence: record.startSeq,
         end_sequence: record.endSeq,
-        redundant: false,
+        auxiliary: false,
       },
       post: {
         start_sequence: Number(record.endSeq) + 1,
         end_sequence: captureEndSequence(record),
-        redundant: true,
+        auxiliary: true,
       },
     };
   }
@@ -600,6 +984,7 @@ export function createRecordModule(ctx) {
       record_start_sequence: record.startSeq,
       record_end_sequence: record.endSeq,
       segments: recordSegments(record),
+      scans: normalizeScans(record.scans),
       recordPadding: {
         prePoints: record.prePoints ?? RECORD_PRE_POINTS,
         postPoints: record.postPoints ?? RECORD_POST_POINTS,
@@ -618,6 +1003,7 @@ export function createRecordModule(ctx) {
       valley: valleys,
       metrics: record.metrics,
       filterConfig: record.filterConfig,
+      filter_status: record.filterStatus,
     };
   }
 
@@ -714,6 +1100,9 @@ export function createRecordModule(ctx) {
       valleys,
       metrics: payload.metrics ?? state.metrics,
       filterConfig: payload.filterConfig ?? payload.filter_params ?? buildFilterConfig(),
+      filterStatus: payload.filterStatus ?? payload.filter_status,
+      scans: normalizeScans(payload.scans),
+      activeScan: null,
     };
   }
 
@@ -756,7 +1145,10 @@ export function createRecordModule(ctx) {
       return null;
     }
 
-    const hasEnded = Number.isFinite(record.endSeq);
+    const hasEnded =
+      record.endSeq !== null &&
+      record.endSeq !== undefined &&
+      Number.isFinite(Number(record.endSeq));
     const endSeq = hasEnded ? record.endSeq : fallbackEndSeq;
     if (!Number.isFinite(endSeq) || (hasEnded && endSeq < record.startSeq)) {
       return null;
@@ -767,7 +1159,35 @@ export function createRecordModule(ctx) {
       maxX: Math.max(record.startSeq + 1, endSeq),
       active: !hasEnded,
       label,
+      scans: scanRangesForRecord(record, endSeq),
     };
+  }
+
+  function scanRangesForRecord(record, fallbackEndSeq) {
+    const fallback = Number(fallbackEndSeq);
+    return normalizeScans([
+      ...(record?.scans ?? []),
+      ...(record?.activeScan ? [record.activeScan] : []),
+    ])
+      .map((scan) => {
+        const startSeq = Number(scan.startSeq ?? scan.start_sequence);
+        const endSeq = Number(scan.endSeq ?? scan.end_sequence);
+        const hasEnded = Number.isFinite(endSeq);
+        const maxX = hasEnded ? endSeq : fallback;
+        if (!Number.isFinite(startSeq) || !Number.isFinite(maxX)) {
+          return null;
+        }
+        return {
+          minX: startSeq,
+          maxX: Math.max(startSeq + 1, maxX),
+          active: !hasEnded,
+          index: scan.index,
+          label: t(hasEnded ? "record.range.scan" : "record.range.scanActive", {
+            index: scan.index ?? "?",
+          }),
+        };
+      })
+      .filter(Boolean);
   }
 
   function currentRecordRange() {
@@ -806,10 +1226,13 @@ export function createRecordModule(ctx) {
     finishRecordCapture,
     loadRecordFile,
     refreshLanguage,
+    resetRecordState,
     segmentForSequence,
     setRecordSectionVisible,
     setRecordStatus,
+    startScan,
     startRecord,
+    endScan,
     updateRecordButtons,
     updateRecordSummary,
   };

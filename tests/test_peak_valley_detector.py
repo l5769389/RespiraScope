@@ -140,6 +140,25 @@ def test_sudden_stream_stop_does_not_crash_realtime_detector():
     assert len(capture.peaks) + len(capture.valleys) >= 0
 
 
+def test_realtime_detector_keeps_bounded_recent_event_history():
+    d = detector()
+    capture = CaptureHandler()
+    d.add_output_handler(capture)
+
+    for sequence in range(1200):
+        d._send_peak_data({"sequence": sequence * 2, "value": 550.0})
+        d._send_valley_data({"sequence": sequence * 2 + 1, "value": 450.0})
+
+    peaks, valleys = d.get_recent_peaks_valleys(5)
+
+    assert len(capture.peaks) == 1200
+    assert len(capture.valleys) == 1200
+    assert len(d.peak_queue) == 1000
+    assert len(d.valley_queue) == 1000
+    assert [item["sequence"] for item in peaks] == [2390, 2392, 2394, 2396, 2398]
+    assert [item["sequence"] for item in valleys] == [2391, 2393, 2395, 2397, 2399]
+
+
 def test_sequence_gap_resets_realtime_detector_and_waits_for_warmup():
     first_values = breathing_wave(seconds=8, bpm=12)
     second_values = breathing_wave(seconds=2, bpm=12)

@@ -68,7 +68,10 @@ class SignalProcessor:
             new_filtered_data = list(filtered_data[-self.step_size:])
             new_filtered_seq = filtered_seq[-self.step_size:]
             for handler in self.output_handlers:
-                handler.handle_filtered_data(new_filtered_seq, new_filtered_data)
+                try:
+                    handler.handle_filtered_data(new_filtered_seq, new_filtered_data)
+                except Exception as exc:
+                    logger.error("filtered data handler error: %s", exc)
 
         history_keep_size = min(self.window_size - self.step_size, len(combined_data))
         self.history_buffer = combined_data[-history_keep_size:]

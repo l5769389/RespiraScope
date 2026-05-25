@@ -5,7 +5,7 @@
     <meta http-equiv="Cache-Control" content="no-store" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Breath Monitor</title>
-    <link rel="stylesheet" href="./styles.css?v=monitor-console-20260512-1" />
+    <link rel="stylesheet" href="./styles.css?v=monitor-scan-20260525-11" />
   </head>
   <body>
     <main class="monitor-shell">
@@ -16,6 +16,8 @@
         <div class="actions">
           <button id="startBtn" data-i18n="button.startMonitoring">Start Monitoring</button>
           <button id="recordStartBtn" class="secondary" data-i18n="button.recordStart">Record Start</button>
+          <button id="scanStartBtn" class="secondary" data-i18n="button.scanStart" disabled>Scan Start</button>
+          <button id="scanEndBtn" class="secondary" data-i18n="button.scanEnd" disabled>Scan End</button>
           <button id="recordEndBtn" class="secondary" data-i18n="button.recordEnd" disabled>Record End</button>
           <button id="saveRecordBtn" class="secondary" data-i18n="button.saveRecord" disabled>Save Record</button>
           <button id="loadRecordBtn" class="secondary" data-i18n="button.loadRecord">Load Record</button>
@@ -56,6 +58,7 @@
             <span class="legend-item peak" data-i18n="legend.peak">Peak</span>
             <span class="legend-item valley" data-i18n="legend.valley">Valley</span>
             <span class="legend-item recorded" data-i18n="legend.recorded">Recorded range</span>
+            <span class="legend-item scan" data-i18n="legend.scan">Scan range</span>
           </div>
           <div id="waveChart" class="chart"></div>
         </section>
@@ -115,6 +118,7 @@
             <span id="recordStatus">Idle</span>
             <span id="recordDuration">0s</span>
             <span id="recordIndexRange">Index -</span>
+            <span id="recordScanRange">Scans -</span>
             <span id="recordTimeRange">Time -</span>
             <span id="recordPointCount">0 points</span>
           </div>
@@ -127,6 +131,6 @@
     <script src="/runtime-config.js"></script>
     <script src="./vendor/socket.io.min.js"></script>
     <script src="./vendor/echarts.min.js"></script>
-    <script type="module" src="./app.js?v=monitor-console-20260512-1"></script>
+    <script type="module" src="./app.js?v=monitor-scan-20260525-11"></script>
   </body>
 </html>

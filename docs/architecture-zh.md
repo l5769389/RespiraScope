@@ -37,7 +37,7 @@ flowchart LR
 | `breath_process.signal_processor` | 执行实时滑动窗口滤波 |
 | `breath_process.filter_strategies` | 区分实时滤波和离线滤波策略 |
 | `breath_process.peak_valley_detector` | 检测波峰、波谷，计算 BPM 和稳定性 |
-| `breath_process.record_manager` | 保存 record 区间和前后冗余点 |
+| `breath_process.record_manager` | 保存 record 区间和前后辅助点 |
 | `http.http_service` | 暴露启动接收、状态、记录、离线滤波等 HTTP 接口 |
 | `socket_io_service` | 维护 Socket.IO 命名空间和实时推送 |
 

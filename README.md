@@ -12,7 +12,7 @@ RespiraScope 是一个呼吸信号采集、滤波、实时展示和记录分析�
 - 波峰、波谷识别，以及 BPM 和呼吸稳定性计算。
 - Socket.IO 实时推送原始数据、滤波数据、峰谷事件和指标。
 - Web Console 单页入口，包含 Monitor、模拟信号设置、使用指南和接口文档。
-- Record Start / End 记录区间，支持 start 前和 end 后冗余数据。
+- Record Start / End 记录区间，支持 start 前和 end 后辅助数据。
 - uv 管理依赖和启动流程，支持 Windows exe 打包。
 
 ## 界面预览
@@ -31,7 +31,7 @@ Breath Monitor 面向实际使用者，展示后端实时推送的原始呼吸�
 
 ### 记录分析
 
-记录片段用于查看 Record Start 到 Record End 期间的原始数据、滤波数据、波峰波谷，并支持带前后冗余点的记录文件。
+记录片段用于查看 Record Start 到 Record End 期间的原始数据、滤波数据、波峰波谷，并支持带前后辅助点的记录文件。
 
 ![Breath Record](screenshots/breath-record.png)
 
@@ -204,7 +204,7 @@ http://localhost:5175/#apiDocs
 
 1. 点击 `Record Start` 开始标记记录区间。
 2. 点击 `Record End` 结束记录区间。
-3. 系统会保留 start 前和 end 后的冗余点，并区分 `pre`、`record`、`post`。
+3. 系统会保留 start 前和 end 后的辅助点，并区分 `pre`、`record`、`post`。
 4. Record End 后会使用离线滤波复算这段数据，通常比实时滤波更平滑，峰谷位置也更适合复盘。
 5. 可以保存记录文件，后续再加载查看。
 
@@ -215,7 +215,8 @@ http://localhost:5175/#apiDocs
 1. 调用 `GET /health` 或 `GET /stream/status` 检查后端状态。
 2. 调用 `POST /startReceive` 启动接收和实时滤波。
 3. 通过 Socket.IO 连接后端 `/breath` 命名空间。
-4. 监听 `breath` 事件，根据 `type` 处理 `raw`、`filtered`、`peak`、`valley`、`metrics`。
+4. 监听 `breath` 事件，根据 `type` 处理 `raw`、`filtered`、`peak`、`valley`、`metrics`、`signal_quality`。
+5. 不再接收传感器数据时调用 `POST /stopReceive` 停止接收并清理实时上下文。
 
 字段说明见 [docs/integration-api-zh.md](docs/integration-api-zh.md)，控制台中也可以打开 `http://localhost:5175/#apiDocs` 查看。
 
@@ -294,7 +295,7 @@ post_points = 100
 | `[console].enabled` | 是否启动 Web Console |
 | `[lab].enabled` | 是否显示模拟信号设置 tab；仅在 mock 开启时生效 |
 | `[monitor].enabled` | 是否显示 Monitor tab |
-| `[record].pre_points` / `[record].post_points` | Record Start 前、End 后额外保存的冗余点数 |
+| `[record].pre_points` / `[record].post_points` | Record Start 前、End 后额外保存的辅助点数 |
 
 真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟信号设置 tab 会隐藏。
 
@@ -318,13 +319,15 @@ Console 页面包含：
 
 ## 数据记录
 
-Record 文件会区分用户真正选择的记录范围和前后冗余范围：
+Record 文件会区分用户真正选择的记录范围和前后辅助范围：
 
 - `record_start_sequence` / `record_end_sequence`：用户点击 Start 到 End 的真实记录区间。
-- `capture_start_sequence` / `capture_end_sequence`：实际保存的完整区间，包含前后冗余点。
+- `capture_start_sequence` / `capture_end_sequence`：实际保存的完整区间，包含前后辅助点。
+- `scans`：记录过程中通过 `scan/start`、`scan/end` 标注的多段扫描范围，每段包含 `index`、`start_sequence`、`end_sequence`。
 - 单个点的 `segment` 字段为 `pre`、`record` 或 `post`。
+- 单个点的 `scan_indexes` 字段标明该点属于哪些扫描片段，不属于任何扫描时为空数组。
 
-这样后续离线滤波可以利用冗余上下文，同时仍能明确区分真正记录区间。
+`record/end` 会等待 end 后辅助点采集完成，并返回当前记录的离线滤波结果；`applyFilter` 仍保留给外部系统复算任意历史 raw_data 使用。这样后续离线滤波可以利用辅助上下文，同时仍能明确区分真正记录区间和扫描区间。
 
 ## 打包为 exe
 

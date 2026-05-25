@@ -2,6 +2,7 @@ import time
 
 from ct_breath.breath_process.socket_client import AsyncSocketClient
 from ct_breath.config import get_config
+from ct_breath.time_utils import iso_time
 
 
 class DataReceiver:
@@ -34,6 +35,18 @@ class DataReceiver:
         )
         await self.socket_client.start_receiving()
 
+    async def stop_receiving(self):
+        if self.socket_client:
+            self.socket_client.stop()
+            await self.socket_client.disconnect()
+
+    def remove_data_handler(self, handler):
+        if handler in self.data_handlers:
+            self.data_handlers.remove(handler)
+
+    def clear_data_handlers(self):
+        self.data_handlers.clear()
+
     def status(self) -> dict:
         now = time.time()
         socket_status = self.socket_client.status() if self.socket_client else {
@@ -53,7 +66,7 @@ class DataReceiver:
             "sensor_port": self.sensor_port,
             "sequence_number": self.sequence_number,
             "received_count": self.received_count,
-            "last_data_at": self.last_data_at,
+            "last_data_at": iso_time(self.last_data_at),
             "seconds_since_last_data": (
                 round(now - self.last_data_at, 3)
                 if self.last_data_at is not None

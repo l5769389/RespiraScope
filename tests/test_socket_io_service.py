@@ -20,6 +20,7 @@ def test_socket_io_broadcasts_to_all_connected_clients(monkeypatch):
 
     monkeypatch.setattr(socket_io_service.sio, "emit", fake_emit)
     socket_io_service.client_ids.clear()
+    socket_io_service.set_snapshot_provider(None)
 
     run(socket_io_service.connect("monitor-client", {}))
     run(socket_io_service.connect("real-client", {}))
@@ -37,3 +38,42 @@ def test_socket_io_broadcasts_to_all_connected_clients(monkeypatch):
 
     run(socket_io_service.disconnect("monitor-client"))
     run(socket_io_service.disconnect("real-client"))
+
+
+def test_socket_io_sends_recent_snapshot_to_new_client(monkeypatch):
+    emitted = []
+
+    async def fake_emit(event, data, namespace=None, room=None):
+        emitted.append({
+            "event": event,
+            "data": data,
+            "namespace": namespace,
+            "room": room,
+        })
+
+    monkeypatch.setattr(socket_io_service.sio, "emit", fake_emit)
+    socket_io_service.client_ids.clear()
+    socket_io_service.set_snapshot_provider(lambda: [
+        {"type": "raw", "data": [[10, 500]]},
+        {"type": "peak", "data": [[12, 540]]},
+    ])
+
+    run(socket_io_service.connect("new-client", {}))
+
+    assert emitted == [
+        {
+            "event": "breath",
+            "data": {"type": "raw", "data": [[10, 500]]},
+            "namespace": "/breath",
+            "room": "new-client",
+        },
+        {
+            "event": "breath",
+            "data": {"type": "peak", "data": [[12, 540]]},
+            "namespace": "/breath",
+            "room": "new-client",
+        },
+    ]
+
+    run(socket_io_service.disconnect("new-client"))
+    socket_io_service.set_snapshot_provider(None)

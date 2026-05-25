@@ -1,5 +1,3 @@
-import asyncio
-from asyncio import Queue
 from collections import deque
 from typing import Optional
 
@@ -46,8 +44,8 @@ class PeakValleyDetector:
         self.detected_valleys = set()
         self.last_event_type = None
         self.last_event_sequence = None
-        self.peak_queue = Queue(maxsize=1000)
-        self.valley_queue = Queue(maxsize=1000)
+        self.peak_queue = deque(maxlen=1000)
+        self.valley_queue = deque(maxlen=1000)
         self.output_handlers = []
         self.pending_events = {}
 
@@ -305,37 +303,19 @@ class PeakValleyDetector:
         return adaptive_prominence
 
     def _send_peak_data(self, peak_data: dict):
-        try:
-            self.peak_queue.put_nowait(peak_data)
-            for handler in self.output_handlers:
-                if hasattr(handler, "handle_peak"):
-                    handler.handle_peak(peak_data)
-        except asyncio.QueueFull:
-            pass
+        self.peak_queue.append(peak_data)
+        for handler in self.output_handlers:
+            if hasattr(handler, "handle_peak"):
+                handler.handle_peak(peak_data)
 
     def _send_valley_data(self, valley_data: dict):
-        try:
-            self.valley_queue.put_nowait(valley_data)
-            for handler in self.output_handlers:
-                if hasattr(handler, "handle_valley"):
-                    handler.handle_valley(valley_data)
-        except asyncio.QueueFull:
-            pass
+        self.valley_queue.append(valley_data)
+        for handler in self.output_handlers:
+            if hasattr(handler, "handle_valley"):
+                handler.handle_valley(valley_data)
 
     def get_recent_peaks_valleys(self, count: int = 10):
-        peaks = []
-        valleys = []
-
-        try:
-            for _ in range(count):
-                if not self.peak_queue.empty():
-                    peaks.append(self.peak_queue.get_nowait())
-                if not self.valley_queue.empty():
-                    valleys.append(self.valley_queue.get_nowait())
-        except asyncio.QueueEmpty:
-            pass
-
-        return peaks, valleys
+        return list(self.peak_queue)[-count:], list(self.valley_queue)[-count:]
 
     def update_parameters(
         self,
@@ -366,27 +346,15 @@ class PeakValleyHandler:
         self.breath_rate_calculator.sampling_rate = sampling_rate
 
     def handle_peak(self, peak_data: dict):
-        try:
-            self.queue_manager.peak_queue.put_nowait([
-                peak_data["sequence"],
-                peak_data["value"],
-            ])
-            self.breath_rate_calculator.add_peak(peak_data)
-            metrics = self.breath_rate_calculator.get_metrics()
-            if metrics["bpm"] is not None:
-                self.queue_manager.handle_metrics(metrics)
-        except asyncio.QueueFull:
-            pass
+        self.queue_manager.handle_peak(peak_data)
+        self.breath_rate_calculator.add_peak(peak_data)
+        metrics = self.breath_rate_calculator.get_metrics()
+        if metrics["bpm"] is not None:
+            self.queue_manager.handle_metrics(metrics)
 
     def handle_valley(self, valley_data: dict):
-        try:
-            self.queue_manager.valley_queue.put_nowait([
-                valley_data["sequence"],
-                valley_data["value"],
-            ])
-            self.breath_rate_calculator.add_valley(valley_data)
-        except asyncio.QueueFull:
-            pass
+        self.queue_manager.handle_valley(valley_data)
+        self.breath_rate_calculator.add_valley(valley_data)
 
 
 class BreathRateCalculator:
