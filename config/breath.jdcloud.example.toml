@@ -1,0 +1,32 @@
+[mock]
+# Keep mock enabled for first cloud verification. Set to false when using a real
+# breath device and update [sensor] below.
+enabled = true
+bind_host = "0.0.0.0"
+
+[sensor]
+# When mock.enabled = true, this points to the local mock TCP server.
+# When mock.enabled = false, set this to the real breath device host and port.
+host = "localhost"
+port = 8088
+
+[backend]
+host = "0.0.0.0"
+port = 8000
+
+[console]
+# Bind to 0.0.0.0 so the Web Console can be reached from the cloud public IP.
+# Restrict access with firewall/security-group rules if the service is public.
+enabled = true
+host = "0.0.0.0"
+port = 5175
+
+[lab]
+enabled = true
+
+[monitor]
+enabled = true
+
+[record]
+pre_points = 100
+post_points = 100

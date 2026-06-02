@@ -299,6 +299,32 @@ post_points = 100
 
 真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟信号设置 tab 会隐藏。
 
+## 京东云部署
+
+项目已提供 GitHub Actions 部署工作流：
+
+```text
+.github/workflows/deploy-jdcloud.yml
+```
+
+推送到 `main` 分支后，工作流会先运行测试，测试通过后通过 SSH 上传代码到京东云服务器，执行 `uv sync --frozen --no-dev`，并用 systemd 启动或重启 `respiscope` 服务。
+
+需要在 GitHub 仓库 Actions Secrets 中配置：
+
+| Secret | 说明 |
+| --- | --- |
+| `JDCLOUD_HOST` | 京东云服务器公网 IP 或域名 |
+| `JDCLOUD_USER` | SSH 登录用户 |
+| `JDCLOUD_SSH_KEY` | SSH 私钥全文 |
+| `JDCLOUD_PORT` | 可选，SSH 端口，默认 `22` |
+| `JDCLOUD_DEPLOY_PATH` | 可选，部署目录，默认 `/opt/RespiraScope` |
+| `JDCLOUD_SERVICE_NAME` | 可选，systemd 服务名，默认 `respiscope` |
+| `JDCLOUD_SERVICE_USER` | 可选，systemd 运行用户，默认等于 `JDCLOUD_USER` |
+
+云服务器首次部署时会使用 [config/breath.jdcloud.example.toml](config/breath.jdcloud.example.toml) 生成 `/ct/breath-config/breath.toml`。该模板默认把 Backend 和 Web Console 绑定到 `0.0.0.0`，便于通过服务器公网 IP 访问。
+
+详细部署和运维步骤见 [docs/deploy-jdcloud-zh.md](docs/deploy-jdcloud-zh.md)。
+
 ## Web Console
 
 Web Console 默认运行在 `http://localhost:5175`，常用入口：

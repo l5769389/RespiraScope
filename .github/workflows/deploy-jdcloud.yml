@@ -1,0 +1,148 @@
+name: Deploy to JD Cloud
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: jdcloud-production
+  cancel-in-progress: false
+
+env:
+  DEPLOY_PATH: ${{ secrets.JDCLOUD_DEPLOY_PATH || '/opt/RespiraScope' }}
+  SERVICE_NAME: ${{ secrets.JDCLOUD_SERVICE_NAME || 'respiscope' }}
+  SSH_PORT: ${{ secrets.JDCLOUD_PORT || '22' }}
+  SERVICE_USER: ${{ secrets.JDCLOUD_SERVICE_USER || secrets.JDCLOUD_USER }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: uv run pytest
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.JDCLOUD_HOST }}" || (echo "Missing secret: JDCLOUD_HOST" && exit 1)
+          test -n "${{ secrets.JDCLOUD_USER }}" || (echo "Missing secret: JDCLOUD_USER" && exit 1)
+          test -n "${{ secrets.JDCLOUD_SSH_KEY }}" || (echo "Missing secret: JDCLOUD_SSH_KEY" && exit 1)
+
+      - name: Create release archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.idea' \
+            --exclude='.pytest_cache' \
+            --exclude='.venv' \
+            --exclude='build' \
+            --exclude='dist' \
+            -czf "/tmp/respiscope-${GITHUB_SHA}.tar.gz" .
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.JDCLOUD_SSH_KEY }}" > ~/.ssh/jdcloud_key
+          chmod 600 ~/.ssh/jdcloud_key
+          ssh-keyscan -p "$SSH_PORT" "${{ secrets.JDCLOUD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload release archive
+        run: |
+          scp -i ~/.ssh/jdcloud_key -P "$SSH_PORT" \
+            "/tmp/respiscope-${GITHUB_SHA}.tar.gz" \
+            "${{ secrets.JDCLOUD_USER }}@${{ secrets.JDCLOUD_HOST }}:/tmp/respiscope-${GITHUB_SHA}.tar.gz"
+
+      - name: Install and restart service
+        run: |
+          ssh -i ~/.ssh/jdcloud_key -p "$SSH_PORT" \
+            "${{ secrets.JDCLOUD_USER }}@${{ secrets.JDCLOUD_HOST }}" \
+            "DEPLOY_PATH='$DEPLOY_PATH' SERVICE_NAME='$SERVICE_NAME' SERVICE_USER='$SERVICE_USER' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'EOF'
+          set -euo pipefail
+
+          RELEASE_ARCHIVE="/tmp/respiscope-${RELEASE_SHA}.tar.gz"
+          RELEASE_DIR="${DEPLOY_PATH}/releases/${RELEASE_SHA}"
+          CURRENT_DIR="${DEPLOY_PATH}/current"
+          CONFIG_DIR="/ct/breath-config"
+          CONFIG_FILE="${CONFIG_DIR}/breath.toml"
+          SSH_USER="$(whoami)"
+
+          if [ -z "${SERVICE_USER}" ]; then
+            SERVICE_USER="${SSH_USER}"
+          fi
+
+          sudo mkdir -p "${DEPLOY_PATH}/releases" "${CONFIG_DIR}"
+          sudo chown -R "${SSH_USER}" "${DEPLOY_PATH}" "${CONFIG_DIR}"
+
+          mkdir -p "${RELEASE_DIR}"
+          tar -xzf "${RELEASE_ARCHIVE}" -C "${RELEASE_DIR}"
+          ln -sfn "${RELEASE_DIR}" "${CURRENT_DIR}"
+
+          if ! command -v uv >/dev/null 2>&1; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="${HOME}/.local/bin:${PATH}"
+          fi
+
+          UV_BIN="$(command -v uv)"
+          sudo install -m 755 "${UV_BIN}" /usr/local/bin/uv
+
+          if [ ! -f "${CONFIG_FILE}" ]; then
+            cp "${CURRENT_DIR}/config/breath.jdcloud.example.toml" "${CONFIG_FILE}"
+          fi
+
+          cd "${CURRENT_DIR}"
+          /usr/local/bin/uv sync --frozen --no-dev
+          sudo chown -R "${SERVICE_USER}" "${DEPLOY_PATH}" "${CONFIG_DIR}"
+
+          sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<SERVICE
+          [Unit]
+          Description=RespiraScope breath monitoring service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=${SERVICE_USER}
+          WorkingDirectory=${CURRENT_DIR}
+          Environment=PYTHONUNBUFFERED=1
+          ExecStart=/usr/local/bin/uv run --frozen --no-dev RespiraScope
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable "${SERVICE_NAME}"
+          sudo systemctl restart "${SERVICE_NAME}"
+          sudo systemctl --no-pager --full status "${SERVICE_NAME}"
+          EOF
