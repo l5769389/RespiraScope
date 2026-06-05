@@ -4,6 +4,7 @@ export function createStatusModule(ctx) {
     INITIAL_DATA_TIMEOUT_MS,
     NO_DATA_CHECK_MS,
     NO_DATA_WARNING_MS,
+    apiFetch,
     dom,
     recordApi,
     setConnectionStatus,
@@ -50,7 +51,7 @@ export function createStatusModule(ctx) {
   }
 
   async function fetchStreamStatus() {
-    const response = await fetch(`${API_BASE}/stream/status`, {
+    const response = await apiFetch("/stream/status", {
       cache: "no-store",
     });
     if (!response.ok) {

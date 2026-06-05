@@ -1,5 +1,6 @@
 const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
 const LANGUAGE_KEY = "RespiraScope-language";
+const PUBLIC_BASE_PATH = normalizePathPrefix(runtimeConfig.publicBasePath);
 
 const TEXT = {
   zh: {
@@ -51,6 +52,23 @@ const TAB_ALIASES = {
   apiDocs: "apiDocs",
   "api-docs": "apiDocs",
 };
+
+function normalizePathPrefix(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "/") {
+    return "";
+  }
+  const withSlash = text.startsWith("/") ? text : `/${text}`;
+  return withSlash.replace(/\/+$/, "");
+}
+
+function withPublicBasePath(path) {
+  if (!path || !PUBLIC_BASE_PATH || /^[a-z]+:\/\//i.test(path)) {
+    return path;
+  }
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${PUBLIC_BASE_PATH}${normalized}`;
+}
 
 function preferredLanguage() {
   const saved = localStorage.getItem(LANGUAGE_KEY);
@@ -118,7 +136,7 @@ function ensureFrameLoaded(tabName) {
     sendLanguageToFrames();
     return;
   }
-  frame.src = frame.dataset.src;
+  frame.src = withPublicBasePath(frame.dataset.src);
 }
 
 function activateTab(tabName, options = {}) {

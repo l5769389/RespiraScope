@@ -1,4 +1,6 @@
-from fastapi import Body, FastAPI, HTTPException
+import inspect
+
+from fastapi import Body, FastAPI, HTTPException, Request
 
 from ct_breath.config import AppConfig, get_config
 from ct_breath.http.schemas import (
@@ -17,11 +19,17 @@ from ct_breath.mock_sensor.breath_simulator import (
     generate_preview,
     mock_breath_controller,
 )
+from ct_breath.session import (
+    breath_system_for_request,
+    mock_controller_for_request,
+    session_id_from_request,
+    session_manager_from_request,
+)
 
 
-def build_preview_config(payload: dict) -> MockBreathConfig:
-    scenario = payload.get("scenario") or mock_breath_controller.get_config().scenario
-    base = config_to_dict(SCENARIO_PRESETS.get(scenario, mock_breath_controller.get_config()))
+def build_preview_config(payload: dict, controller=mock_breath_controller) -> MockBreathConfig:
+    scenario = payload.get("scenario") or controller.get_config().scenario
+    base = config_to_dict(SCENARIO_PRESETS.get(scenario, controller.get_config()))
     base.update({key: value for key, value in payload.items() if value is not None})
     return MockBreathConfig(**base)
 
@@ -133,14 +141,14 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
             "record": {
                 "pre_points": app_config.record_pre_points,
                 "post_points": app_config.record_post_points,
+                "storage_root": str(app_config.record_storage_root),
             },
         }
         return success_response(data, **data)
 
     @app.get("/stream/status", response_model=StreamStatusResponse)
-    async def stream_status():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def stream_status(request: Request):
+        breath_system = breath_system_for_request(request)
         return StreamStatusResponse(
             code=1,
             status="success",
@@ -148,9 +156,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/startReceive")
-    async def start_receive(config: FilterConfig | None = Body(default=None)):
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def start_receive(request: Request, config: FilterConfig | None = Body(default=None)):
+        breath_system = breath_system_for_request(request)
         config = normalize_filter_config(config or FilterConfig())
         already_started = breath_system.is_start and breath_system.state == "running"
         stream = breath_system.start(config)
@@ -167,9 +174,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/stopReceive")
-    async def stop_receive():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def stop_receive(request: Request):
+        breath_system = breath_system_for_request(request)
         await breath_system.stop()
         return success_response(
             {"stream": breath_system.status()},
@@ -178,9 +184,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/setRTFilterParams")
-    async def set_filter(config: FilterConfig | None = Body(default=None)):
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def set_filter(request: Request, config: FilterConfig | None = Body(default=None)):
+        breath_system = breath_system_for_request(request)
         config = normalize_filter_config(config or FilterConfig())
         breath_system.update_filter_config(config)
         return success_response(
@@ -190,9 +195,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/record/start")
-    async def start_record_breath():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def start_record_breath(request: Request):
+        breath_system = breath_system_for_request(request)
         already_recording = breath_system.record_manager.recording
         try:
             record = breath_system.start_record()
@@ -206,9 +210,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/record/end")
-    async def end_record_breath():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def end_record_breath(request: Request):
+        breath_system = breath_system_for_request(request)
         try:
             record = await breath_system.stop_record_and_filter()
         except ValueError as exc:
@@ -230,9 +233,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/record/reset")
-    async def reset_record_breath():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def reset_record_breath(request: Request):
+        breath_system = breath_system_for_request(request)
         record = breath_system.reset_record()
         return success_response(
             {"record": record},
@@ -241,9 +243,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/scan/start")
-    async def start_scan():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def start_scan(request: Request):
+        breath_system = breath_system_for_request(request)
         try:
             scan = breath_system.start_scan()
         except ValueError as exc:
@@ -256,9 +257,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/scan/end")
-    async def end_scan():
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def end_scan(request: Request):
+        breath_system = breath_system_for_request(request)
         try:
             scan = breath_system.stop_scan()
         except ValueError as exc:
@@ -271,20 +271,26 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/record/save")
-    async def save_record_to_file(config: SaveBreathConfig | None = Body(default=None)):
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def save_record_to_file(request: Request, config: SaveBreathConfig | None = Body(default=None)):
         config = config or SaveBreathConfig()
+        session_id = session_id_from_request(request)
+        if session_id:
+            session_manager = session_manager_from_request(request)
+            breath_system = session_manager.get_system(session_id)
+            folder_path = session_manager.record_folder(session_id)
+        else:
+            breath_system = breath_system_for_request(request)
+            folder_path = config.folder_path
         try:
-            file_path = await breath_system.save_record(config.folder_path)
+            save_result = breath_system.save_record(folder_path)
+            file_path = await save_result if inspect.isawaitable(save_result) else save_result
         except ValueError as exc:
             raise record_http_error(exc, breath_system) from exc
         return success_response({"file_path": file_path})
 
     @app.post("/applyFilter")
-    async def apply_filter(config: ApplyFilterConfig | None = Body(default=None)):
-        from ct_breath.breath_process.breath_process_manager import breath_system
-
+    async def apply_filter(request: Request, config: ApplyFilterConfig | None = Body(default=None)):
+        breath_system = breath_system_for_request(request)
         config = config or ApplyFilterConfig()
         config.filter_config = normalize_filter_config(config.filter_config)
         filter_data, peak, valley, filter_config, metrics = await breath_system.apply_filter(config)
@@ -306,14 +312,16 @@ def register_mock_routes(app: FastAPI):
         }
 
     @app.get("/mock/config")
-    async def mock_config():
+    async def mock_config(request: Request):
+        mock_breath_controller = mock_controller_for_request(request)
         return {
             "code": 1,
             "data": config_to_dict(mock_breath_controller.get_config()),
         }
 
     @app.post("/mock/config")
-    async def set_mock_config(config: MockBreathConfigRequest):
+    async def set_mock_config(request: Request, config: MockBreathConfigRequest):
+        mock_breath_controller = mock_controller_for_request(request)
         next_config = mock_breath_controller.set_config(config.model_dump(exclude_none=True))
         return {
             "code": 1,
@@ -321,11 +329,12 @@ def register_mock_routes(app: FastAPI):
         }
 
     @app.post("/mock/preview")
-    async def mock_preview(config: MockBreathPreviewRequest):
+    async def mock_preview(request: Request, config: MockBreathPreviewRequest):
+        mock_breath_controller = mock_controller_for_request(request)
         payload = config.model_dump(exclude_none=True)
         seconds = payload.pop("seconds")
         sampling_rate = payload.pop("sampling_rate")
-        preview_config = build_preview_config(payload)
+        preview_config = build_preview_config(payload, mock_breath_controller)
         return {
             "code": 1,
             "data": generate_preview(preview_config, seconds, sampling_rate),

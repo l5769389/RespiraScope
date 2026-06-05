@@ -77,6 +77,22 @@ GET /runtime/config
 | 秒数 | 耗时、间隔类字段使用数值秒，例如 `duration_seconds`、`seconds_since_last_data` |
 | 断流判断 | 如果 `sequence` 出现明显跳跃，外部系统应认为中间发生过断流或丢包，不建议把缺口两端直接连线 |
 
+### 1.4 多用户会话隔离
+
+云端多人访问时，推荐每个浏览器标签页或每个外部业务会话生成一个不重复的匿名会话 ID，并在所有请求中携带：
+
+```http
+X-RespiraScope-Session: <session-id>
+```
+
+Socket.IO 连接需要同时在 query 或 auth 中携带：
+
+```text
+session_id=<session-id>
+```
+
+带 session 的请求会使用独立的实时采集、滤波参数、记录区间、扫描区间、模拟信号配置和 Socket.IO 推送房间。未携带 session 的请求继续使用旧版全局运行实例，主要用于本地调试和兼容旧客户端。
+
 ## 2. 推荐调用流程
 
 ### 2.1 实时监测流程
@@ -136,6 +152,17 @@ POST /applyFilter
 | 事件名 | `breath` |
 | 示例地址 | `http://127.0.0.1:8000/breath` |
 | 推送节奏 | 默认约 40ms 一批 |
+
+多用户隔离模式下，连接示例：
+
+```js
+const sessionId = crypto.randomUUID();
+const socket = io("http://127.0.0.1:8000/breath", {
+  transports: ["websocket"],
+  auth: { session_id: sessionId },
+  query: { session_id: sessionId },
+});
+```
 
 新客户端连接后，如果后端已有最近的实时数据，会立即向该客户端补发一组最近快照。快照仍然使用同一个 `breath` 事件，外部系统不需要监听额外事件。
 
@@ -945,7 +972,15 @@ BPM 和呼吸稳定性指标。
 - end 后辅助点采集已经完成。
 - 当前记录中存在 raw 或 filtered 数据。
 
-请求体：可省略。省略或传 `{}` 时保存到默认目录 `D:/ct/breath-file`。
+请求体：可省略。
+
+带 `X-RespiraScope-Session` 的云端会话请求会忽略 `folder_path`，由后端强制保存到：
+
+```text
+<record.storage_root>/<session-id>/
+```
+
+未携带 session 的旧客户端仍兼容 `folder_path`。省略或传 `{}` 时保存到旧默认目录 `D:/ct/breath-file`。
 
 ```json
 {
@@ -961,7 +996,7 @@ BPM 和呼吸稳定性指标。
   "status": "success",
   "message": "ok",
   "data": {
-    "file_path": "D:/ct/breath-file/breath_record_1779690000.json"
+    "file_path": "D:/ct/breath-file/session-a/breath_record_1779690000.json"
   }
 }
 ```
@@ -1283,5 +1318,8 @@ curl -X POST http://127.0.0.1:8000/record/end
 ```bash
 curl -X POST http://127.0.0.1:8000/record/save \
   -H "Content-Type: application/json" \
+  -H "X-RespiraScope-Session: session-a" \
   -d '{"folder_path":"D:/ct/breath-file"}'
 ```
+
+带 session 时，示例中的 `folder_path` 会被忽略，记录保存到服务端配置的 session 临时目录。

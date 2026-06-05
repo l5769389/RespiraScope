@@ -1,4 +1,17 @@
 const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
+function normalizePathPrefix(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "/") {
+    return "";
+  }
+  const withSlash = text.startsWith("/") ? text : `/${text}`;
+  return withSlash.replace(/\/+$/, "");
+}
+
+function trimUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
 function isLoopbackHost(host) {
   return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(String(host || "").toLowerCase());
 }
@@ -14,7 +27,17 @@ function resolveBackendHost(configHost) {
 
 const backendHost = resolveBackendHost(runtimeConfig.backendHost);
 const backendPort = runtimeConfig.backendPort || 8000;
-const API_BASE = `http://${backendHost}:${backendPort}`;
+const publicApiBasePath = normalizePathPrefix(runtimeConfig.apiBasePath);
+const API_BASE = runtimeConfig.apiBaseUrl
+  ? trimUrl(runtimeConfig.apiBaseUrl)
+  : publicApiBasePath
+    ? `${window.location.origin}${publicApiBasePath}`
+    : `http://${backendHost}:${backendPort}`;
+const sessionConfig = runtimeConfig.session || {};
+const SESSION_HEADER = sessionConfig.header || "X-RespiraScope-Session";
+const SESSION_KEY = "RespiraScope-session";
+const SESSION_ID = getSessionId();
+const SESSION_HEADERS = { [SESSION_HEADER]: SESSION_ID };
 const SAMPLING_RATE = 50;
 const DEMO_SAMPLING_RATE = 25;
 const DEMO_SECONDS = 18;
@@ -37,6 +60,18 @@ const SCENARIO_THEME = {
   cough_artifact: { color: "#0f766e", soft: "#ecfdf5" },
 };
 const FALLBACK_THEME = { color: "#2563eb", soft: "#e8f0ff" };
+
+function getSessionId() {
+  const existing = sessionStorage.getItem(SESSION_KEY);
+  if (existing) {
+    return existing;
+  }
+  const generated = crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  sessionStorage.setItem(SESSION_KEY, generated);
+  return generated;
+}
 
 const TRANSLATIONS = {
   zh: {
@@ -324,6 +359,7 @@ function setStatus(messageOrKey, params = {}) {
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
+      ...SESSION_HEADERS,
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },

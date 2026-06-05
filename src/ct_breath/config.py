@@ -7,6 +7,8 @@ from typing import Any
 
 WINDOWS_CONFIG_PATH = Path("D:/ct/breath-config/breath.toml")
 LINUX_CONFIG_PATH = Path("/ct/breath-config/breath.toml")
+WINDOWS_RECORD_STORAGE_ROOT = Path("D:/ct/breath-file")
+LINUX_RECORD_STORAGE_ROOT = Path("/ct/breath-records")
 CONFIG_DIRECTORIES = [
     Path("D:/ct/breath-config"),
     Path("/ct/breath-config"),
@@ -16,6 +18,7 @@ CONFIG_FILENAMES = [
     "config.toml",
 ]
 DEFAULT_CONFIG_PATH = WINDOWS_CONFIG_PATH if os.name == "nt" else LINUX_CONFIG_PATH
+DEFAULT_RECORD_STORAGE_ROOT = WINDOWS_RECORD_STORAGE_ROOT if os.name == "nt" else LINUX_RECORD_STORAGE_ROOT
 DEFAULT_CONFIG_TEXT = """[mock]
 # Enable the built-in simulated breath signal server and /mock/* APIs.
 enabled = true
@@ -48,7 +51,21 @@ enabled = true
 # Extra samples kept before Record Start and after Record End.
 pre_points = 100
 post_points = 100
-"""
+# Server-side root for temporary session record files.
+storage_root = "{record_storage_root}"
+
+[session]
+# Anonymous browser sessions are isolated from each other and cleaned up after
+# this idle period.
+idle_timeout_seconds = 14400
+
+[proxy]
+# Public path prefixes used when RespiraScope is reverse-proxied under a
+# subpath such as /breath. Leave empty for direct local access.
+public_base_path = ""
+api_base_path = ""
+socket_path = ""
+""".format(record_storage_root=str(DEFAULT_RECORD_STORAGE_ROOT).replace("\\", "/"))
 
 
 @dataclass(frozen=True)
@@ -70,6 +87,11 @@ class AppConfig:
     monitor_port: int = 5175
     record_pre_points: int = 100
     record_post_points: int = 100
+    record_storage_root: Path = DEFAULT_RECORD_STORAGE_ROOT
+    session_idle_timeout_seconds: int = 14400
+    public_base_path: str = ""
+    public_api_base_path: str = ""
+    public_socket_path: str = ""
     config_path: Path = DEFAULT_CONFIG_PATH
 
     @property
@@ -164,6 +186,15 @@ def config_str(value: Any, default: str) -> str:
     return str(value)
 
 
+def config_path_prefix(value: Any, default: str = "") -> str:
+    text = config_str(value, default).strip()
+    if not text or text == "/":
+        return ""
+    if not text.startswith("/"):
+        text = f"/{text}"
+    return text.rstrip("/")
+
+
 def get_config(path: str | Path | None = None) -> AppConfig:
     config_path = resolve_config_path(path)
     ensure_config_file(config_path)
@@ -175,6 +206,8 @@ def get_config(path: str | Path | None = None) -> AppConfig:
     lab = section(config_data, "lab")
     monitor = section(config_data, "monitor")
     record = section(config_data, "record")
+    session_config = section(config_data, "session")
+    proxy = section(config_data, "proxy")
 
     defaults = AppConfig(config_path=config_path)
     return AppConfig(
@@ -195,6 +228,14 @@ def get_config(path: str | Path | None = None) -> AppConfig:
         monitor_port=config_int(monitor.get("port"), defaults.monitor_port),
         record_pre_points=max(0, config_int(record.get("pre_points"), defaults.record_pre_points)),
         record_post_points=max(0, config_int(record.get("post_points"), defaults.record_post_points)),
+        record_storage_root=Path(config_str(record.get("storage_root"), str(defaults.record_storage_root))),
+        session_idle_timeout_seconds=max(
+            60,
+            config_int(session_config.get("idle_timeout_seconds"), defaults.session_idle_timeout_seconds),
+        ),
+        public_base_path=config_path_prefix(proxy.get("public_base_path"), defaults.public_base_path),
+        public_api_base_path=config_path_prefix(proxy.get("api_base_path"), defaults.public_api_base_path),
+        public_socket_path=config_path_prefix(proxy.get("socket_path"), defaults.public_socket_path),
         config_path=config_path,
     )
 

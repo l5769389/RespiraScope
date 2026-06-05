@@ -56,7 +56,7 @@ const CONTENT = {
   zh: {
     runtime: [
       ["后端 API", () => endpoint(runtimeConfig.backendHost, runtimeConfig.backendPort)],
-      ["实时订阅", () => `${endpoint(runtimeConfig.backendHost, runtimeConfig.backendPort)}/breath`],
+      ["实时订阅", () => socketEndpoint()],
       ["传感器输入", () => `${runtimeConfig.sensorHost || "-"}:${runtimeConfig.sensorPort || "-"}`],
       ["推送节奏", () => "约 40ms 一批"],
     ],
@@ -228,7 +228,7 @@ raw message = { "type": "raw", "data": [[sequence, sensor_value]] }`,
   en: {
     runtime: [
       ["Backend API", () => endpoint(runtimeConfig.backendHost, runtimeConfig.backendPort)],
-      ["Realtime subscription", () => `${endpoint(runtimeConfig.backendHost, runtimeConfig.backendPort)}/breath`],
+      ["Realtime subscription", () => socketEndpoint()],
       ["Sensor input", () => `${runtimeConfig.sensorHost || "-"}:${runtimeConfig.sensorPort || "-"}`],
       ["Push interval", () => "About every 40 ms"],
     ],
@@ -409,9 +409,42 @@ function preferredLanguage() {
 
 let language = preferredLanguage();
 
+function normalizePathPrefix(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "/") {
+    return "";
+  }
+  const withSlash = text.startsWith("/") ? text : `/${text}`;
+  return withSlash.replace(/\/+$/, "");
+}
+
+function trimUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function publicApiEndpoint() {
+  if (runtimeConfig.apiBaseUrl) {
+    return trimUrl(runtimeConfig.apiBaseUrl);
+  }
+  const path = normalizePathPrefix(runtimeConfig.apiBasePath);
+  return path ? `${window.location.origin}${path}` : "";
+}
+
+function socketEndpoint() {
+  if (runtimeConfig.socketBaseUrl || runtimeConfig.socketPath) {
+    const base = runtimeConfig.socketBaseUrl ? trimUrl(runtimeConfig.socketBaseUrl) : window.location.origin;
+    const path = normalizePathPrefix(runtimeConfig.socketPath) || "/socket.io";
+    return `${base}${path} (namespace /breath)`;
+  }
+  return `${endpoint(runtimeConfig.backendHost, runtimeConfig.backendPort)}/breath`;
+}
+
 function endpoint(host, port) {
   if (!host || !port) {
     return "-";
+  }
+  if (host === runtimeConfig.backendHost && port === runtimeConfig.backendPort) {
+    return publicApiEndpoint() || `http://${host}:${port}`;
   }
   return `http://${host}:${port}`;
 }

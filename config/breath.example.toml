@@ -30,3 +30,17 @@ enabled = true
 # Extra samples kept before Record Start and after Record End.
 pre_points = 100
 post_points = 100
+# Server-side root for temporary session record files.
+storage_root = "D:/ct/breath-file"
+
+[session]
+# Anonymous browser sessions are isolated from each other and cleaned up after
+# this idle period.
+idle_timeout_seconds = 14400
+
+[proxy]
+# Leave these empty for direct local access. Set them when the app is mounted
+# behind a reverse proxy subpath.
+public_base_path = ""
+api_base_path = ""
+socket_path = ""

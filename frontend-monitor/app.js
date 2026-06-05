@@ -4,6 +4,19 @@ import { createSocketModule } from "./modules/socket.js?v=monitor-scan-20260525-
 import { createStatusModule } from "./modules/status.js?v=monitor-scan-20260525-11";
 
 const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
+function normalizePathPrefix(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "/") {
+    return "";
+  }
+  const withSlash = text.startsWith("/") ? text : `/${text}`;
+  return withSlash.replace(/\/+$/, "");
+}
+
+function trimUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
 function isLoopbackHost(host) {
   return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(String(host || "").toLowerCase());
 }
@@ -19,8 +32,26 @@ function resolveBackendHost(configHost) {
 
 const backendHost = resolveBackendHost(runtimeConfig.backendHost);
 const backendPort = runtimeConfig.backendPort || 8000;
-const API_BASE = `http://${backendHost}:${backendPort}`;
-const SOCKET_URL = `${API_BASE}/breath`;
+const publicApiBasePath = normalizePathPrefix(runtimeConfig.apiBasePath);
+const publicSocketPath = normalizePathPrefix(runtimeConfig.socketPath) || "/socket.io";
+const API_BASE = runtimeConfig.apiBaseUrl
+  ? trimUrl(runtimeConfig.apiBaseUrl)
+  : publicApiBasePath
+    ? `${window.location.origin}${publicApiBasePath}`
+    : `http://${backendHost}:${backendPort}`;
+const SOCKET_BASE = runtimeConfig.socketBaseUrl
+  ? trimUrl(runtimeConfig.socketBaseUrl)
+  : runtimeConfig.socketPath
+    ? window.location.origin
+    : API_BASE;
+const SOCKET_URL = `${SOCKET_BASE}/breath`;
+const SOCKET_PATH = publicSocketPath;
+const sessionConfig = runtimeConfig.session || {};
+const SESSION_HEADER = sessionConfig.header || "X-RespiraScope-Session";
+const SESSION_QUERY_PARAM = sessionConfig.queryParam || "session_id";
+const SESSION_KEY = "RespiraScope-session";
+const SESSION_ID = getSessionId();
+const SESSION_HEADERS = { [SESSION_HEADER]: SESSION_ID };
 const LANGUAGE_KEY = "RespiraScope-language";
 const MAX_POINTS = 30000;
 const RECORD_MAX_POINTS = 180000;
@@ -44,6 +75,28 @@ const RECORD_RANGE_ACTIVE_COLOR = "rgba(245, 158, 11, 0.16)";
 const RECORD_RANGE_DONE_COLOR = "rgba(20, 184, 166, 0.12)";
 const SCAN_RANGE_ACTIVE_COLOR = "rgba(37, 99, 235, 0.2)";
 const SCAN_RANGE_DONE_COLOR = "rgba(37, 99, 235, 0.14)";
+
+function getSessionId() {
+  const existing = sessionStorage.getItem(SESSION_KEY);
+  if (existing) {
+    return existing;
+  }
+  const generated = crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  sessionStorage.setItem(SESSION_KEY, generated);
+  return generated;
+}
+
+function apiFetch(path, options = {}) {
+  return fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...SESSION_HEADERS,
+      ...(options.headers || {}),
+    },
+  });
+}
 const TRANSLATIONS = {
   zh: {
     "monitor.title": "呼吸监测",
@@ -454,7 +507,7 @@ function togglePause() {
 }
 
 async function resetBackendRecord() {
-  const response = await fetch(`${API_BASE}/record/reset`, { method: "POST" });
+  const response = await apiFetch("/record/reset", { method: "POST" });
   if (!response.ok) {
     throw new Error(`record/reset ${response.status}`);
   }
@@ -529,7 +582,11 @@ const moduleContext = {
   RECORD_RANGE_DONE_COLOR,
   SCAN_RANGE_ACTIVE_COLOR,
   SCAN_RANGE_DONE_COLOR,
+  SOCKET_PATH,
   SOCKET_URL,
+  SESSION_ID,
+  SESSION_QUERY_PARAM,
+  apiFetch,
   Y_AXIS_MIN_SPAN,
   Y_AXIS_PADDING_RATIO,
   appendSeries,
@@ -643,7 +700,7 @@ dom.smoothingSelect.addEventListener("change", (event) => {
 dom.confirmRealtimeEvents?.addEventListener("change", () => {
   state.filterConfig = buildFilterConfig();
   if (state.running) {
-    fetch(`${API_BASE}/setRTFilterParams`, {
+    apiFetch("/setRTFilterParams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(state.filterConfig),

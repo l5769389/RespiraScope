@@ -34,3 +34,17 @@ def test_frontend_runtime_config_uses_selected_backend_port():
     payload = runtime_config_payload(config)
 
     assert payload["backendPort"] == 8002
+
+
+def test_frontend_runtime_config_includes_public_proxy_paths():
+    config = AppConfig(
+        public_base_path="/breath",
+        public_api_base_path="/breath-api",
+        public_socket_path="/breath-socket/socket.io",
+    )
+
+    payload = runtime_config_payload(config)
+
+    assert payload["publicBasePath"] == "/breath"
+    assert payload["apiBasePath"] == "/breath-api"
+    assert payload["socketPath"] == "/breath-socket/socket.io"

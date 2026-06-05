@@ -185,9 +185,35 @@ function preferredLanguage() {
 
 let language = preferredLanguage();
 
+function normalizePathPrefix(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "/") {
+    return "";
+  }
+  const withSlash = text.startsWith("/") ? text : `/${text}`;
+  return withSlash.replace(/\/+$/, "");
+}
+
+function publicEndpoint(kind) {
+  const path =
+    kind === "api"
+      ? normalizePathPrefix(runtimeConfig.apiBasePath)
+      : normalizePathPrefix(runtimeConfig.publicBasePath);
+  return path ? `${window.location.origin}${path}` : "";
+}
+
 function endpoint(host, port) {
   if (!host || !port) {
     return "-";
+  }
+  if (host === runtimeConfig.backendHost && port === runtimeConfig.backendPort) {
+    return publicEndpoint("api") || `http://${host}:${port}`;
+  }
+  if (
+    (host === runtimeConfig.consoleHost && port === runtimeConfig.consolePort)
+    || (host === runtimeConfig.apiDocsHost && port === runtimeConfig.apiDocsPort)
+  ) {
+    return publicEndpoint("frontend") || `http://${host}:${port}`;
   }
   return `http://${host}:${port}`;
 }

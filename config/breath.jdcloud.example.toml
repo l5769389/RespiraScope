@@ -30,3 +30,14 @@ enabled = true
 [record]
 pre_points = 100
 post_points = 100
+storage_root = "/ct/breath-records"
+
+[session]
+# Each browser tab gets an anonymous isolated runtime session.
+idle_timeout_seconds = 14400
+
+[proxy]
+# Public routes expected behind the cloud reverse proxy.
+public_base_path = "/breath"
+api_base_path = "/breath-api"
+socket_path = "/breath-socket/socket.io"

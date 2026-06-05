@@ -7,6 +7,7 @@ export function createRecordModule(ctx) {
     RECORD_MAX_POINTS,
     RECORD_POST_POINTS,
     RECORD_PRE_POINTS,
+    apiFetch,
     buildFilterConfig,
     chartApi,
     copySeriesRange,
@@ -413,7 +414,7 @@ export function createRecordModule(ctx) {
     chartApi.scheduleRender(true);
     record.recordStartPromise = (async () => {
       try {
-        const response = await fetch(`${API_BASE}/record/start`, { method: "POST" });
+        const response = await apiFetch("/record/start", { method: "POST" });
         if (!response.ok) {
           throw new Error(`record/start ${response.status}`);
         }
@@ -457,7 +458,7 @@ export function createRecordModule(ctx) {
 
     try {
       await record.recordStartPromise?.catch(() => null);
-      const response = await fetch(`${API_BASE}/scan/start`, { method: "POST" });
+      const response = await apiFetch("/scan/start", { method: "POST" });
       if (!response.ok) {
         throw new Error(`scan/start ${response.status}`);
       }
@@ -495,7 +496,7 @@ export function createRecordModule(ctx) {
 
     try {
       await record.recordStartPromise?.catch(() => null);
-      const response = await fetch(`${API_BASE}/scan/end`, { method: "POST" });
+      const response = await apiFetch("/scan/end", { method: "POST" });
       if (!response.ok) {
         throw new Error(`scan/end ${response.status}`);
       }
@@ -531,7 +532,7 @@ export function createRecordModule(ctx) {
     chartApi.scheduleRender(true);
 
     try {
-      const response = await fetch(`${API_BASE}/record/end`, { method: "POST" });
+      const response = await apiFetch("/record/end", { method: "POST" });
       if (!response.ok) {
         throw new Error(`record/end ${response.status}`);
       }
@@ -668,7 +669,7 @@ export function createRecordModule(ctx) {
       let latestMetrics = record.metrics;
 
       for (const rawSegment of rawSegments) {
-        const response = await fetch(`${API_BASE}/applyFilter`, {
+        const response = await apiFetch("/applyFilter", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

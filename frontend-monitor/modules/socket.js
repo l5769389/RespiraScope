@@ -1,8 +1,12 @@
 export function createSocketModule(ctx) {
   const {
     API_BASE,
+    SOCKET_PATH,
     SOCKET_URL,
+    SESSION_ID,
+    SESSION_QUERY_PARAM,
     appendSeries,
+    apiFetch,
     buildFilterConfig,
     chartApi,
     dom,
@@ -39,7 +43,7 @@ export function createSocketModule(ctx) {
 
     let response;
     try {
-      response = await fetch(`${API_BASE}/startReceive`, {
+      response = await apiFetch("/startReceive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state.filterConfig),
@@ -72,6 +76,9 @@ export function createSocketModule(ctx) {
     if (!state.socket) {
       state.socket = io(SOCKET_URL, {
         autoConnect: false,
+        auth: { [SESSION_QUERY_PARAM]: SESSION_ID },
+        path: SOCKET_PATH || "/socket.io",
+        query: { [SESSION_QUERY_PARAM]: SESSION_ID },
         withCredentials: true,
         transports: ["websocket"],
       });

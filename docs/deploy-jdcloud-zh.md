@@ -149,9 +149,19 @@ port = 8000
 enabled = true
 host = "0.0.0.0"
 port = 5175
+
+[record]
+storage_root = "/ct/breath-records"
 ```
 
 这样后端和 Web Console 才能通过公网 IP 访问。
+
+如果启用记录保存，请确保 systemd 服务用户可以写入记录目录：
+
+```bash
+sudo mkdir -p /ct/breath-records
+sudo chown -R deploy:deploy /ct/breath-records
+```
 
 如果接入真实呼吸设备，请登录服务器编辑：
 
@@ -194,6 +204,8 @@ http://你的服务器公网IP:8000/health
 ```
 
 生产环境更推荐只放行 80/443，并用 Nginx 反向代理到本机 `8000` 和 `5175`。
+
+多人公网访问时，请同时阅读 [云端多用户隔离部署说明](cloud-multi-user-zh.md)。当前前端会为每个浏览器标签页生成匿名 session，后端按 session 隔离滤波参数、记录状态、模拟信号配置和 Socket.IO 推送。
 
 ## 7. 常用运维命令
 

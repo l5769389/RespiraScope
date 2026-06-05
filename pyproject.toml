@@ -43,6 +43,7 @@ resolution = "lowest-direct"
 module-name = "ct_breath"
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 norecursedirs = [".venv", "dist", "build", "frontend-lab", "frontend-monitor"]

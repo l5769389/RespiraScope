@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from ct_breath.config import AppConfig, get_config
+from ct_breath.session_ids import SESSION_HEADER, SESSION_QUERY_PARAM
 
 
 def display_host(host: str) -> str:
@@ -43,6 +44,9 @@ def runtime_config_payload(app_config: AppConfig) -> dict:
         "apiDocsEnabled": app_config.console_enabled,
         "apiDocsHost": display_host(app_config.console_host),
         "apiDocsPort": app_config.console_port if app_config.console_enabled else None,
+        "publicBasePath": app_config.public_base_path,
+        "apiBasePath": app_config.public_api_base_path,
+        "socketPath": app_config.public_socket_path,
         "monitorEnabled": app_config.monitor_enabled,
         "monitorHost": display_host(app_config.console_host),
         "monitorPort": app_config.console_port if app_config.console_enabled and app_config.monitor_enabled else None,
@@ -52,6 +56,12 @@ def runtime_config_payload(app_config: AppConfig) -> dict:
         "record": {
             "prePoints": app_config.record_pre_points,
             "postPoints": app_config.record_post_points,
+            "storageRoot": str(app_config.record_storage_root),
+        },
+        "session": {
+            "header": SESSION_HEADER,
+            "queryParam": SESSION_QUERY_PARAM,
+            "idleTimeoutSeconds": app_config.session_idle_timeout_seconds,
         },
     }
 
@@ -62,8 +72,14 @@ class ConfigStaticHandler(SimpleHTTPRequestHandler):
         self.frontend_roots = frontend_roots or {}
         super().__init__(*args, directory=directory, **kwargs)
 
+    def strip_public_base_path(self, path: str) -> str:
+        base_path = self.app_config.public_base_path
+        if base_path and (path == base_path or path.startswith(f"{base_path}/")):
+            return path[len(base_path):] or "/"
+        return path
+
     def translate_path(self, path):
-        parsed_path = urlparse(path).path
+        parsed_path = self.strip_public_base_path(urlparse(path).path)
         root = Path(self.directory)
         relative_path = parsed_path
 
@@ -90,7 +106,7 @@ class ConfigStaticHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
-        if urlparse(self.path).path == "/runtime-config.js":
+        if self.strip_public_base_path(urlparse(self.path).path) == "/runtime-config.js":
             self.serve_runtime_config()
             return
         super().do_GET()

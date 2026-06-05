@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 
 from ct_breath.breath_process.data_manager import DataQueueManager
 from ct_breath.breath_process.data_receive import DataReceiver
@@ -12,23 +13,43 @@ from ct_breath.breath_process.record_manager import RecordManager
 from ct_breath.breath_process.send_to_client import DataSender
 from ct_breath.breath_process.signal_processor import SignalProcessor
 from ct_breath.breath_process.signal_quality import SignalQualityAnalyzer
-from ct_breath.config import get_config
+from ct_breath.config import AppConfig, get_config
 from ct_breath.http.schemas import ApplyFilterConfig, FilterConfig
 from ct_breath.logger import logger
+from ct_breath.mock_sensor.breath_simulator import MockBreathConfig
 from ct_breath.socket_io_service import set_snapshot_provider
 
 
 class BreathProcessSystem:
-    def __init__(self):
-        config = get_config()
-        self.data_receiver = DataReceiver()
+    def __init__(
+        self,
+        config: AppConfig | None = None,
+        *,
+        session_id: str | None = None,
+        send_message: Callable[[dict], Awaitable[None]] | None = None,
+        snapshot_provider_registrar: Callable[[Callable[[], list[dict]]], None] | None = None,
+        mock_config_provider: Callable[[], MockBreathConfig] | None = None,
+        use_direct_mock: bool = False,
+    ):
+        config = config or get_config()
+        self.config = config
+        self.session_id = session_id
+        self.data_receiver = DataReceiver(
+            config,
+            mock_config_provider=mock_config_provider,
+            use_direct_mock=use_direct_mock,
+        )
         self.signal_processor = SignalProcessor()
         self.queue_manager = DataQueueManager()
         self.record_manager = RecordManager(
             pre_points=config.record_pre_points,
             post_points=config.record_post_points,
         )
-        self.data_sender = DataSender(self.queue_manager)
+        self.data_sender = (
+            DataSender(self.queue_manager, send_message=send_message)
+            if send_message
+            else DataSender(self.queue_manager)
+        )
         self.peak_valley_detector = PeakValleyDetector(
             min_peak_height=None,
             min_peak_distance=25,
@@ -45,7 +66,12 @@ class BreathProcessSystem:
         self.state = "idle"
         self.last_error: str | None = None
         self.tasks: dict[str, asyncio.Task] = {}
-        set_snapshot_provider(self.queue_manager.snapshot_messages)
+        if snapshot_provider_registrar is not None:
+            snapshot_provider_registrar(self.queue_manager.snapshot_messages)
+        elif session_id:
+            set_snapshot_provider(self.queue_manager.snapshot_messages, session_id=session_id)
+        else:
+            set_snapshot_provider(self.queue_manager.snapshot_messages)
         self._setup_connections()
         self._sync_detection_config(self.signal_processor.filter_config)
 
@@ -67,6 +93,7 @@ class BreathProcessSystem:
         self.signal_processor.update_filter_config(config)
         self._sync_detection_config(config)
         self._attach_receiver_handlers()
+        self._ensure_processing_tasks()
         self._ensure_receiver_task()
         return self.status()
 

@@ -10,7 +10,8 @@ from ct_breath.config import AppConfig, get_config
 from ct_breath.http.http_service import create_routes
 from ct_breath.logger import logger
 from ct_breath.mock_sensor.async_sensor import async_sensor_start
-from ct_breath.socket_io_service import sio
+from ct_breath.session import SessionManager
+from ct_breath.socket_io_service import set_session_touch_callback, sio
 
 
 def lifespan_for(app_config: AppConfig):
@@ -31,6 +32,10 @@ def lifespan_for(app_config: AppConfig):
             socket_client_task = asyncio.create_task(breath_system.start_system())
             tasks.append(socket_client_task)
 
+            cleanup_task = asyncio.create_task(app.state.session_manager.cleanup_idle_sessions())
+            tasks.append(cleanup_task)
+            set_session_touch_callback(app.state.session_manager.touch)
+
             logger.info("All background tasks started")
             yield
 
@@ -40,6 +45,8 @@ def lifespan_for(app_config: AppConfig):
 
         finally:
             logger.info("Shutting down application...")
+            set_session_touch_callback(None)
+            await app.state.session_manager.stop_all()
             await breath_system.stop_system()
 
             for task in tasks:
@@ -69,6 +76,7 @@ def create_app(app_config: AppConfig | None = None) -> FastAPI:
         lifespan=lifespan_for(config),
     )
     app.state.config = config
+    app.state.session_manager = SessionManager(config)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
