@@ -11,7 +11,7 @@ RespiraScope 是一个呼吸信号采集、滤波、实时展示和记录分析�
 - 实时滤波、离线滤波复算和自适应滤波参数。
 - 波峰、波谷识别，以及 BPM 和呼吸稳定性计算。
 - Socket.IO 实时推送原始数据、滤波数据、峰谷事件和指标。
-- Web Console 单页入口，包含 Monitor、模拟信号设置、使用指南和接口文档。
+- Web Console 单页入口，面向公网体验提供实时体验和模拟实验两种模式。
 - Record Start / End 记录区间，支持 start 前和 end 后辅助数据。
 - uv 管理依赖和启动流程，支持 Windows exe 打包。
 
@@ -77,7 +77,7 @@ flowchart LR
 | 实时处理 | `DataReceiver` 接收原始点，`SignalProcessor` 实时滤波，`PeakValleyDetector` 识别峰谷并计算 BPM |
 | 数据推送 | 后端通过 Socket.IO `/breath` 命名空间广播 raw、filtered、peak、valley、metrics |
 | 记录复算 | Record 结束后可使用离线滤波重新处理记录区间，获得更平滑的复盘结果 |
-| Web Console | 单一网页入口，包含呼吸监测、模拟信号设置、使用说明和接口说明 |
+| Web Console | React 壳层组织实时体验和模拟实验，构建后仍作为静态资源由 Python 服务 |
 | 外部配置 | 不依赖 `.env`，从 `D:/ct/breath-config/breath.toml` 或 `/ct/breath-config/breath.toml` 读取部署配置 |
 
 ## 文件结构
@@ -86,11 +86,11 @@ flowchart LR
 .
 |-- config/                  # 示例配置
 |-- docs/                    # 算法、接口、架构和开源说明
-|-- frontend-api-docs/       # 对外接口说明页面
-|-- frontend-console/        # 统一 Web Console 入口
-|-- frontend-guide/          # 基础使用说明页面
-|-- frontend-lab/            # 模拟信号设置页面
-|-- frontend-monitor/        # 实时监控页面
+|-- frontend-api-docs/       # 开发者接口说明页面（不再作为 Console 主入口）
+|-- frontend-console/        # 统一 Web Console 体验入口
+|-- frontend-guide/          # 开发者使用说明页面（不再作为 Console 主入口）
+|-- frontend-lab/            # 模拟实验页面
+|-- frontend-monitor/        # 实时体验页面
 |-- scripts/                 # 开发和打包脚本
 |-- src/
 |   `-- ct_breath/           # Python 应用包
@@ -130,8 +130,8 @@ uv run RespiraScope
 
 - Backend: `http://localhost:8000`
 - Web Console: `http://localhost:5175`
-- 使用指南: `http://localhost:5175/#guide`
-- 接口文档: `http://localhost:5175/#apiDocs`
+- 实时体验: `http://localhost:5175/#monitor`
+- 模拟实验: `http://localhost:5175/#lab`
 
 第一次启动时，如果外部配置文件不存在，程序会自动生成一份默认配置。
 
@@ -171,13 +171,11 @@ uv run RespiraScope
 http://localhost:5175
 ```
 
-也可以直接进入指定 tab：
+也可以直接进入指定模式：
 
 ```text
 http://localhost:5175/#monitor
 http://localhost:5175/#lab
-http://localhost:5175/#guide
-http://localhost:5175/#apiDocs
 ```
 
 ### 3. 调试模拟信号
@@ -218,7 +216,7 @@ http://localhost:5175/#apiDocs
 4. 监听 `breath` 事件，根据 `type` 处理 `raw`、`filtered`、`peak`、`valley`、`metrics`、`signal_quality`。
 5. 不再接收传感器数据时调用 `POST /stopReceive` 停止接收并清理实时上下文。
 
-字段说明见 [docs/integration-api-zh.md](docs/integration-api-zh.md)，控制台中也可以打开 `http://localhost:5175/#apiDocs` 查看。
+字段说明见 [docs/integration-api-zh.md](docs/integration-api-zh.md)。内置 Console 面向公网体验，不再展示接口说明 tab。
 
 ## 开发模式
 
@@ -237,9 +235,9 @@ uv run python scripts/dev.py
 开发脚本会启动：
 
 - 后端 `uvicorn --reload`
-- 单个静态 Web Console
+- 单个静态 Web Console（Console 壳层由 React/Vite 构建）
 
-Console 中的 Monitor、模拟信号设置、使用指南和接口文档以 tab 形式组织。后端代码变更会由 uvicorn 自动重启，静态前端不会注入热更新。
+Console 中的实时体验和模拟实验以两种模式组织。后端代码变更会由 uvicorn 自动重启；如果修改 `frontend-console/src/`，需要运行 `npm run build:console` 重新生成 `frontend-console/assets/console.js`。
 
 开发模式同样支持 backend port 自动避让。比如 `8000` 被占用时，日志会提示使用 `8001` 或其他可用端口，前端会自动连接这个新端口。
 
@@ -293,11 +291,11 @@ post_points = 100
 | `[sensor].host` / `[sensor].port` | 真实呼吸设备 TCP 地址；启用模拟时也可以指向本机 |
 | `[backend].host` / `[backend].port` | 后端 HTTP 和 Socket.IO 服务地址 |
 | `[console].enabled` | 是否启动 Web Console |
-| `[lab].enabled` | 是否显示模拟信号设置 tab；仅在 mock 开启时生效 |
-| `[monitor].enabled` | 是否显示 Monitor tab |
+| `[lab].enabled` | 是否显示模拟实验模式；仅在 mock 开启时生效 |
+| `[monitor].enabled` | 是否显示实时体验模式 |
 | `[record].pre_points` / `[record].post_points` | Record Start 前、End 后额外保存的辅助点数 |
 
-真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟信号设置 tab 会隐藏。
+真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟实验模式会隐藏。
 
 ## 京东云部署
 
@@ -329,17 +327,15 @@ post_points = 100
 
 Web Console 默认运行在 `http://localhost:5175`，常用入口：
 
-- 呼吸监测：`http://localhost:5175/#monitor`
-- 模拟信号设置：`http://localhost:5175/#lab`
-- 使用指南：`http://localhost:5175/#guide`
-- 接口文档：`http://localhost:5175/#apiDocs`
+- 实时体验：`http://localhost:5175/#monitor`
+- 模拟实验：`http://localhost:5175/#lab`
 
 Console 页面包含：
 
-- Breath Monitor：面向使用者的实时原始波形、滤波波形、波峰波谷、BPM、稳定性、回看和记录分析。
-- 模拟信号设置：面向开发和调试的模拟呼吸状态切换、波形预览和滤波效果观察。
-- 使用指南：基础配置项和操作流程说明。
-- 接口文档：外部系统集成所需的 HTTP、Socket.IO、实时数据和记录文件字段说明。
+- 实时体验：面向使用者的实时原始波形、滤波波形、波峰波谷、BPM、稳定性、回看和记录分析。
+- 模拟实验：面向公网演示和调试的模拟呼吸状态切换、波形预览和滤波效果观察。
+
+使用说明和接口说明保留在仓库 `docs/` 目录中，不再作为内置 Console 的主 tab。
 
 后端会把 `/breath` 命名空间的数据广播给所有连接的 Socket.IO client，因此 Monitor 和外部业务系统可以同时连接后端。
 
@@ -375,7 +371,7 @@ uv run --with "pyinstaller>=6.16" python scripts/build_exe.py
 dist/RespiraScope.exe
 ```
 
-前端静态资源和配置模板会通过 PyInstaller `--add-data` 嵌入 exe。生产环境通常只需要分发最终 exe，再在外部配置目录放置或自动生成 `breath.toml`。
+前端静态资源和配置模板会通过 PyInstaller `--add-data` 嵌入 exe。React Console 的构建产物已经位于 `frontend-console/assets/`，生产环境通常只需要分发最终 exe，再在外部配置目录放置或自动生成 `breath.toml`。
 
 如需调试展开目录包：
 

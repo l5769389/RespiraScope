@@ -32,7 +32,7 @@ flowchart LR
 | `ct_breath.config` | 读取外部 TOML 配置，不依赖环境变量 |
 | `ct_breath.app` | 创建 FastAPI 与 Socket.IO 应用 |
 | `ct_breath.main` | 本地和 exe 启动入口，启动后端与静态 Web Console |
-| `ct_breath.frontend_static` | 启动和注入静态前端运行配置 |
+| `ct_breath.frontend_static` | 启动和注入静态前端运行配置，服务 React Console 构建产物 |
 | `breath_process.data_receive` | 从 TCP 传感器读取原始采样值 |
 | `breath_process.signal_processor` | 执行实时滑动窗口滤波 |
 | `breath_process.filter_strategies` | 区分实时滤波和离线滤波策略 |
@@ -63,12 +63,12 @@ flowchart TB
 http://localhost:5175
 ```
 
-Console 中包含四个主要页面：
+Console 壳层使用 React/Vite 构建，构建结果仍是普通静态资源。Console 中包含两个主要体验模式：
 
-- Monitor：实时面向用户显示呼吸数据。
-- 模拟信号设置：开发和调试模拟呼吸状态。
-- Guide：基础配置和操作说明。
-- API Docs：外部系统集成说明。
+- 实时体验：面向用户显示呼吸数据、滤波结果、BPM、记录和扫描标记。
+- 模拟实验：面向公网演示和调试模拟呼吸状态、波形预览和滤波效果。
+
+基础使用说明和接口说明保留在仓库文档中，不再作为内置 Console 的主 tab。
 
 ## 配置边界
 
@@ -85,4 +85,4 @@ Linux:   /ct/breath-config/breath.toml
 
 启动时会先检查 `[backend].port` 是否可用。如果端口已被占用，程序会从后续端口中寻找一个空闲端口，并使用这个端口启动后端。
 
-前端不会直接写死配置文件里的 backend port，而是读取 `/runtime-config.js` 中的实际运行端口。因此当后端从 `8000` 自动切换到 `8001` 时，Monitor、模拟信号设置和接口文档页也会同步连接到 `8001`。
+前端不会直接写死配置文件里的 backend port，而是读取 `/runtime-config.js` 中的实际运行端口。因此当后端从 `8000` 自动切换到 `8001` 时，实时体验和模拟实验也会同步连接到 `8001`。

@@ -46,7 +46,6 @@ def main():
                     routes.append(f"monitor={console_url}/#monitor")
                 if config.lab_enabled:
                     routes.append(f"setup={console_url}/#lab")
-                routes.extend([f"guide={console_url}/#guide", f"apiDocs={console_url}/#apiDocs"])
                 print(f"[RespiraScope] console pages: {', '.join(routes)}", flush=True)
         else:
             print("[RespiraScope] front console disabled; Breath Console is not started", flush=True)

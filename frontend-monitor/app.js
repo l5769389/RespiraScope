@@ -3,7 +3,8 @@ import { createRecordModule } from "./modules/record.js?v=monitor-scan-20260525-
 import { createSocketModule } from "./modules/socket.js?v=monitor-scan-20260525-11";
 import { createStatusModule } from "./modules/status.js?v=monitor-scan-20260525-11";
 
-const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
+const shared = window.RespiraScopeShared || {};
+const runtimeConfig = shared.runtimeConfig || window.CT_BREATH_RUNTIME_CONFIG || {};
 function normalizePathPrefix(value) {
   const text = String(value || "").trim();
   if (!text || text === "/") {
@@ -34,25 +35,25 @@ const backendHost = resolveBackendHost(runtimeConfig.backendHost);
 const backendPort = runtimeConfig.backendPort || 8000;
 const publicApiBasePath = normalizePathPrefix(runtimeConfig.apiBasePath);
 const publicSocketPath = normalizePathPrefix(runtimeConfig.socketPath) || "/socket.io";
-const API_BASE = runtimeConfig.apiBaseUrl
+const API_BASE = shared.apiBase || (runtimeConfig.apiBaseUrl
   ? trimUrl(runtimeConfig.apiBaseUrl)
   : publicApiBasePath
     ? `${window.location.origin}${publicApiBasePath}`
-    : `http://${backendHost}:${backendPort}`;
+    : `http://${backendHost}:${backendPort}`);
 const SOCKET_BASE = runtimeConfig.socketBaseUrl
   ? trimUrl(runtimeConfig.socketBaseUrl)
   : runtimeConfig.socketPath
     ? window.location.origin
     : API_BASE;
-const SOCKET_URL = `${SOCKET_BASE}/breath`;
-const SOCKET_PATH = publicSocketPath;
+const SOCKET_URL = shared.socketUrl || `${SOCKET_BASE}/breath`;
+const SOCKET_PATH = shared.socketPath || publicSocketPath;
 const sessionConfig = runtimeConfig.session || {};
-const SESSION_HEADER = sessionConfig.header || "X-RespiraScope-Session";
-const SESSION_QUERY_PARAM = sessionConfig.queryParam || "session_id";
-const SESSION_KEY = "RespiraScope-session";
-const SESSION_ID = getSessionId();
-const SESSION_HEADERS = { [SESSION_HEADER]: SESSION_ID };
-const LANGUAGE_KEY = "RespiraScope-language";
+const SESSION_HEADER = shared.sessionHeader || sessionConfig.header || "X-RespiraScope-Session";
+const SESSION_QUERY_PARAM = shared.sessionQueryParam || sessionConfig.queryParam || "session_id";
+const SESSION_KEY = shared.sessionKey || "RespiraScope-session";
+const SESSION_ID = shared.sessionId || getSessionId();
+const SESSION_HEADERS = shared.sessionHeaders || { [SESSION_HEADER]: SESSION_ID };
+const LANGUAGE_KEY = shared.languageKey || "RespiraScope-language";
 const MAX_POINTS = 30000;
 const RECORD_MAX_POINTS = 180000;
 const DISPLAY_WINDOW = 1500;
@@ -89,6 +90,9 @@ function getSessionId() {
 }
 
 function apiFetch(path, options = {}) {
+  if (shared.apiFetch) {
+    return shared.apiFetch(path, options);
+  }
   return fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -728,6 +732,9 @@ window.addEventListener("message", (event) => {
   }
   if (event.data?.type === "RespiraScope-language" && (event.data.language === "zh" || event.data.language === "en")) {
     translatePage(event.data.language);
+  }
+  if (event.data?.type === "RespiraScope-start-demo" && !state.running) {
+    dom.startBtn.click();
   }
 });
 

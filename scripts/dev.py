@@ -150,7 +150,6 @@ def main() -> int:
             routes.append(f"monitor={console_url}/#monitor")
         if config.lab_enabled:
             routes.append(f"setup={console_url}/#lab")
-        routes.extend([f"guide={console_url}/#guide", f"apiDocs={console_url}/#apiDocs"])
         print(f"[dev] console pages: {', '.join(routes)}", flush=True)
 
     try:

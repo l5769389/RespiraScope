@@ -5,106 +5,135 @@
     <meta http-equiv="Cache-Control" content="no-store" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Breath Monitor</title>
-    <link rel="stylesheet" href="./styles.css?v=monitor-scan-20260525-11" />
+    <link rel="stylesheet" href="./styles.css?v=monitor-experience-20260605" />
   </head>
   <body>
     <main class="monitor-shell">
       <header class="topbar">
-        <div>
-          <h1 data-i18n="monitor.title">Breath Monitor</h1>
+        <div class="page-heading">
+          <span class="eyebrow">Realtime Monitor</span>
+          <h1 data-i18n="monitor.title">呼吸监测</h1>
+          <p data-i18n="chart.realtimeSubtitle">后端实时发送的原始、滤波、波峰与波谷信号</p>
         </div>
-        <div class="actions">
-          <button id="startBtn" data-i18n="button.startMonitoring">Start Monitoring</button>
-          <button id="recordStartBtn" class="secondary" data-i18n="button.recordStart">Record Start</button>
-          <button id="scanStartBtn" class="secondary" data-i18n="button.scanStart" disabled>Scan Start</button>
-          <button id="scanEndBtn" class="secondary" data-i18n="button.scanEnd" disabled>Scan End</button>
-          <button id="recordEndBtn" class="secondary" data-i18n="button.recordEnd" disabled>Record End</button>
-          <button id="saveRecordBtn" class="secondary" data-i18n="button.saveRecord" disabled>Save Record</button>
-          <button id="loadRecordBtn" class="secondary" data-i18n="button.loadRecord">Load Record</button>
-          <input id="loadRecordInput" type="file" accept="application/json,.json" hidden />
-          <button id="pauseBtn" class="secondary" data-i18n="button.pauseView">Pause View</button>
-          <button id="resetBtn" class="secondary" data-i18n="button.reset">Reset</button>
+        <div class="state-pill">
+          <span data-i18n="statusPanel.status">状态</span>
+          <strong id="connectionStatus" data-status-key="connection.disconnected">未连接</strong>
         </div>
       </header>
+
+      <section class="control-strip" aria-label="Realtime workflow controls">
+        <div class="control-group primary-group">
+          <span class="group-label">体验</span>
+          <button id="startBtn" data-i18n="button.startMonitoring">开始监测</button>
+          <button id="pauseBtn" class="secondary" data-i18n="button.pauseView">暂停视图</button>
+          <button id="resetBtn" class="secondary" data-i18n="button.reset">重置</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label">记录片段</span>
+          <button id="recordStartBtn" class="secondary" data-i18n="button.recordStart">开始记录</button>
+          <button id="recordEndBtn" class="secondary" data-i18n="button.recordEnd" disabled>结束记录</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label">扫描标记</span>
+          <button id="scanStartBtn" class="secondary" data-i18n="button.scanStart" disabled>开始扫描</button>
+          <button id="scanEndBtn" class="secondary" data-i18n="button.scanEnd" disabled>结束扫描</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label">文件</span>
+          <button id="saveRecordBtn" class="secondary" data-i18n="button.saveRecord" disabled>保存记录</button>
+          <button id="loadRecordBtn" class="secondary" data-i18n="button.loadRecord">加载记录</button>
+          <input id="loadRecordInput" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
 
       <div class="monitor-layout">
         <section class="chart-section realtime-section">
           <div class="chart-header">
             <div>
-              <h2 data-i18n="chart.realtimeTitle">Realtime Waveform</h2>
-              <p data-i18n="chart.realtimeSubtitle">Live raw, filtered, peak, and valley signals</p>
+              <h2 data-i18n="chart.realtimeTitle">实时波形</h2>
+              <p>灰色为原始输入，蓝色为滤波输出；红点和绿点分别表示识别到的波峰和波谷。</p>
             </div>
-            <div class="chart-tools">
-              <label>
-                <span data-i18n="field.smoothing">Smoothing</span>
-                <select id="smoothingSelect">
-                  <option value="auto" selected data-i18n="smoothing.auto">Auto</option>
-                  <option value="off" data-i18n="smoothing.off">Off</option>
-                  <option value="light" data-i18n="smoothing.light">Light</option>
-                  <option value="medium" data-i18n="smoothing.medium">Medium</option>
-                  <option value="strong" data-i18n="smoothing.strong">Strong</option>
-                </select>
-              </label>
-              <label>
-                <input id="confirmRealtimeEvents" type="checkbox" />
-                <span data-i18n="field.confirmPeaks">Confirm Peaks</span>
-              </label>
-              <button id="followBtn" class="secondary">Live Follow</button>
-            </div>
+            <details class="advanced-tools">
+              <summary>高级视图</summary>
+              <div class="chart-tools">
+                <label>
+                  <span data-i18n="field.smoothing">平滑</span>
+                  <select id="smoothingSelect">
+                    <option value="auto" selected data-i18n="smoothing.auto">自动</option>
+                    <option value="off" data-i18n="smoothing.off">关闭</option>
+                    <option value="light" data-i18n="smoothing.light">轻度</option>
+                    <option value="medium" data-i18n="smoothing.medium">中等</option>
+                    <option value="strong" data-i18n="smoothing.strong">强</option>
+                  </select>
+                </label>
+                <label class="checkbox-row">
+                  <input id="confirmRealtimeEvents" type="checkbox" />
+                  <span data-i18n="field.confirmPeaks">延迟确认峰谷</span>
+                </label>
+                <button id="followBtn" class="secondary">实时跟随</button>
+              </div>
+            </details>
           </div>
           <div class="legend">
-            <span class="legend-item raw" data-i18n="legend.raw">Raw</span>
-            <span class="legend-item filtered" data-i18n="legend.filtered">Filtered</span>
-            <span class="legend-item peak" data-i18n="legend.peak">Peak</span>
-            <span class="legend-item valley" data-i18n="legend.valley">Valley</span>
-            <span class="legend-item recorded" data-i18n="legend.recorded">Recorded range</span>
-            <span class="legend-item scan" data-i18n="legend.scan">Scan range</span>
+            <span class="legend-item raw" data-i18n="legend.raw">原始</span>
+            <span class="legend-item filtered" data-i18n="legend.filtered">滤波</span>
+            <span class="legend-item peak" data-i18n="legend.peak">波峰</span>
+            <span class="legend-item valley" data-i18n="legend.valley">波谷</span>
+            <span class="legend-item recorded" data-i18n="legend.recorded">记录区间</span>
+            <span class="legend-item scan" data-i18n="legend.scan">扫描区间</span>
           </div>
           <div id="waveChart" class="chart"></div>
         </section>
 
         <aside class="side-panel">
           <section class="status-grid">
-            <article>
-              <span data-i18n="statusPanel.status">Status</span>
-              <strong id="connectionStatus" data-status-key="connection.disconnected">Disconnected</strong>
-            </article>
             <article class="metric-primary">
               <span>BPM</span>
               <strong id="bpmValue">-</strong>
             </article>
             <article>
-              <span data-i18n="statusPanel.stability">Stability</span>
+              <span data-i18n="statusPanel.stability">稳定性</span>
               <strong id="qualityValue">-</strong>
-              <small id="stabilityHintValue" data-i18n="hint.waitingEnoughBreaths">waiting for enough breaths</small>
+              <small id="stabilityHintValue" data-i18n="hint.waitingEnoughBreaths">等待足够呼吸周期</small>
             </article>
             <article>
-              <span data-i18n="statusPanel.intervalCv">Interval CV</span>
+              <span data-i18n="statusPanel.intervalCv">间隔 CV</span>
               <strong id="intervalCvValue">-</strong>
-              <small id="intervalCvHintValue" data-i18n="hint.intervalVariation">variation between breath intervals</small>
+              <small id="intervalCvHintValue" data-i18n="hint.intervalVariation">呼吸间隔的变化程度</small>
             </article>
             <article>
-              <span data-i18n="statusPanel.rawPoints">Raw Points</span>
+              <span data-i18n="statusPanel.rawPoints">原始点数</span>
               <strong id="rawCountValue">0</strong>
             </article>
             <article>
-              <span data-i18n="statusPanel.filteredPoints">Filtered Points</span>
+              <span data-i18n="statusPanel.filteredPoints">滤波点数</span>
               <strong id="filteredCountValue">0</strong>
             </article>
           </section>
 
+          <section class="record-workflow" aria-label="Record workflow">
+            <h2 data-i18n="record.title">记录片段</h2>
+            <div class="workflow-steps">
+              <span>未记录</span>
+              <span>记录中</span>
+              <span>扫描标记</span>
+              <span>离线复算</span>
+              <span>保存回看</span>
+            </div>
+          </section>
+
           <section class="details">
             <div>
-              <strong data-i18n="details.signalWindow">Signal Window</strong>
+              <strong data-i18n="details.signalWindow">信号窗口</strong>
               <span id="windowValue">0 - 1500 samples</span>
             </div>
             <div>
-              <strong data-i18n="details.recordFile">Record File</strong>
-              <span id="recordFileValue" data-record-file-key="record.file.none">No file loaded</span>
-              <small data-i18n="details.recordFileHint">save or load a recorded segment</small>
+              <strong data-i18n="details.recordFile">记录文件</strong>
+              <span id="recordFileValue" data-record-file-key="record.file.none">无已加载文件</span>
+              <small data-i18n="details.recordFileHint">保存或加载一段记录</small>
             </div>
             <div>
-              <strong data-i18n="details.lastUpdate">Last Update</strong>
+              <strong data-i18n="details.lastUpdate">最后更新</strong>
               <span id="lastUpdateValue">-</span>
             </div>
           </section>
@@ -113,24 +142,24 @@
 
       <section id="recordSection" class="chart-section record-section" hidden>
         <div class="chart-header">
-          <h2 data-i18n="record.title">Recorded Segment</h2>
+          <h2 data-i18n="record.title">记录片段</h2>
           <div class="record-meta">
-            <span id="recordStatus">Idle</span>
+            <span id="recordStatus">空闲</span>
             <span id="recordDuration">0s</span>
-            <span id="recordIndexRange">Index -</span>
-            <span id="recordScanRange">Scans -</span>
-            <span id="recordTimeRange">Time -</span>
-            <span id="recordPointCount">0 points</span>
+            <span id="recordIndexRange">索引 -</span>
+            <span id="recordScanRange">扫描 -</span>
+            <span id="recordTimeRange">时间 -</span>
+            <span id="recordPointCount">0 点</span>
           </div>
         </div>
         <div id="recordChart" class="chart record-chart"></div>
       </section>
-
     </main>
 
-    <script src="./runtime-config.js"></script>
+    <script src="../runtime-config.js"></script>
+    <script src="../shared/runtime.js?v=shared-runtime-20260605"></script>
     <script src="./vendor/socket.io.min.js"></script>
     <script src="./vendor/echarts.min.js"></script>
-    <script type="module" src="./app.js?v=monitor-scan-20260525-11"></script>
+    <script type="module" src="./app.js?v=monitor-experience-20260605"></script>
   </body>
 </html>

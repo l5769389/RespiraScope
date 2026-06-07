@@ -49,15 +49,14 @@ body {
   box-shadow: var(--shadow);
 }
 
-.lab-topbar > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.page-heading {
   min-width: 0;
 }
 
 .lab-topbar .eyebrow {
+  display: inline-flex;
   margin: 0;
+  margin-bottom: 5px;
   padding: 4px 7px;
   background: #eef4ff;
   border: 1px solid #d8e6ff;
@@ -67,7 +66,32 @@ body {
 }
 
 .lab-topbar p {
-  display: none;
+  display: block;
+  margin-top: 4px;
+  max-width: 720px;
+}
+
+.lab-status {
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+  padding: 9px 12px;
+  background: var(--teal-soft);
+  border: 1px solid #9ee5d6;
+  border-radius: 8px;
+}
+
+.lab-status span {
+  color: #487067;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lab-status strong {
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
 }
 
 .eyebrow,
@@ -147,6 +171,7 @@ p {
   grid-area: controls;
   display: grid;
   gap: 10px;
+  align-content: start;
   max-height: calc(100vh - 144px);
   overflow: auto;
   position: sticky;
@@ -160,6 +185,35 @@ p {
 .panel-block + .panel-block {
   padding-top: 10px;
   border-top: 1px solid #edf2f7;
+}
+
+.advanced-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.advanced-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 12px;
+  background: #f8fafc;
+  border: 1px solid #dfe7ef;
+  border-radius: 6px;
+  color: #263445;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  list-style: none;
+}
+
+.advanced-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-panel[open] {
+  padding-top: 2px;
 }
 
 .section-heading,
@@ -300,6 +354,10 @@ button.secondary:hover {
   flex: 1 1 160px;
 }
 
+.primary-actions {
+  margin-top: 10px;
+}
+
 #statusText {
   min-height: 34px;
   display: flex;
@@ -312,6 +370,14 @@ button.secondary:hover {
   color: #475467;
   font-size: 12px;
   font-weight: 700;
+}
+
+.lab-status #statusText {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #0f766e;
 }
 
 .demo-grid {
@@ -634,6 +700,10 @@ canvas {
   .topbar-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .lab-status {
+    width: 100%;
   }
 
   .section-heading p {

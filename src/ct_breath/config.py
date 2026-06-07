@@ -35,8 +35,8 @@ host = "0.0.0.0"
 port = 8000
 
 [console]
-# Single frontend web console. It contains Breath Monitor, Mock Signal Setup,
-# and the usage guide, so dev/prod only start one frontend server.
+# Single frontend web console. It contains Realtime Monitor and Mock Lab,
+# so dev/prod only start one frontend server.
 enabled = true
 host = "127.0.0.1"
 port = 5175

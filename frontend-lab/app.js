@@ -1,4 +1,5 @@
-const runtimeConfig = window.CT_BREATH_RUNTIME_CONFIG || {};
+const shared = window.RespiraScopeShared || {};
+const runtimeConfig = shared.runtimeConfig || window.CT_BREATH_RUNTIME_CONFIG || {};
 function normalizePathPrefix(value) {
   const text = String(value || "").trim();
   if (!text || text === "/") {
@@ -28,21 +29,22 @@ function resolveBackendHost(configHost) {
 const backendHost = resolveBackendHost(runtimeConfig.backendHost);
 const backendPort = runtimeConfig.backendPort || 8000;
 const publicApiBasePath = normalizePathPrefix(runtimeConfig.apiBasePath);
-const API_BASE = runtimeConfig.apiBaseUrl
+const API_BASE = shared.apiBase || (runtimeConfig.apiBaseUrl
   ? trimUrl(runtimeConfig.apiBaseUrl)
   : publicApiBasePath
     ? `${window.location.origin}${publicApiBasePath}`
-    : `http://${backendHost}:${backendPort}`;
+    : `http://${backendHost}:${backendPort}`);
 const sessionConfig = runtimeConfig.session || {};
-const SESSION_HEADER = sessionConfig.header || "X-RespiraScope-Session";
-const SESSION_KEY = "RespiraScope-session";
-const SESSION_ID = getSessionId();
-const SESSION_HEADERS = { [SESSION_HEADER]: SESSION_ID };
+const SESSION_HEADER = shared.sessionHeader || sessionConfig.header || "X-RespiraScope-Session";
+const SESSION_KEY = shared.sessionKey || "RespiraScope-session";
+const SESSION_ID = shared.sessionId || getSessionId();
+const SESSION_HEADERS = shared.sessionHeaders || { [SESSION_HEADER]: SESSION_ID };
 const SAMPLING_RATE = 50;
 const DEMO_SAMPLING_RATE = 25;
 const DEMO_SECONDS = 18;
-const COLLAPSED_DEMO_COUNT = 4;
-const LANGUAGE_KEY = "RespiraScope-language";
+const COLLAPSED_DEMO_COUNT = 5;
+const LANGUAGE_KEY = shared.languageKey || "RespiraScope-language";
+const FEATURED_SCENARIOS = ["normal", "shallow", "noisy", "apnea", "motion_artifact"];
 const SCENARIO_THEME = {
   normal: { color: "#2563eb", soft: "#e8f0ff" },
   tachypnea: { color: "#b42318", soft: "#fff1f2" },
@@ -77,9 +79,9 @@ const TRANSLATIONS = {
   zh: {
     "app.kicker": "模拟控制台",
     "app.title": "模拟信号设置",
-    "app.subtitle": "模拟源、处理参数和波形预览。",
+    "app.subtitle": "先选择一个可理解的呼吸场景，再进入实时监测观察算法表现。",
     "language.label": "语言",
-    "button.applyMock": "应用到模拟源",
+    "button.applyMock": "应用并开始体验",
     "button.preview": "生成预览",
     "button.useScenario": "载入预设",
     "field.scenario": "模拟预设",
@@ -95,15 +97,15 @@ const TRANSLATIONS = {
     "field.peakRatio": "峰谷阈值比例",
     "field.autoPeak": "自动识别峰谷",
     "demo.kicker": "预设波形",
-    "demo.title": "呼吸波形示例",
-    "demo.subtitle": "不同模拟参数下的原始信号形态。",
+    "demo.title": "选择一个呼吸场景",
+    "demo.subtitle": "优先从正常、浅呼吸、噪声、屏气和体动伪影开始，最容易看出滤波和峰谷识别的边界。",
     "demo.selected": "已选",
     "demo.expand": "展开全部",
     "demo.collapse": "收起",
     "panel.mockKicker": "模拟信号",
-    "panel.mockTitle": "模拟参数",
+    "panel.mockTitle": "当前场景",
     "panel.filterKicker": "处理",
-    "panel.filterTitle": "处理参数",
+    "panel.filterTitle": "滤波与峰谷识别",
     "metric.bpm": "BPM",
     "metric.quality": "稳定性",
     "metric.breaths": "呼吸次数",
@@ -122,11 +124,11 @@ const TRANSLATIONS = {
     "chart.peaks": "波峰",
     "chart.valleys": "波谷",
     "status.loading": "正在加载预设...",
-    "status.loaded": "预设已加载。",
+    "status.loaded": "场景已加载，选择后可直接开始体验。",
     "status.loadingDemos": "正在生成波形示例...",
     "status.demosReady": "波形示例已更新。",
     "status.apply": "正在应用模拟参数...",
-    "status.applied": "已应用模拟参数：{scenario}",
+    "status.applied": "已应用：{scenario}，正在打开实时体验。",
     "status.preview": "正在生成预览...",
     "status.filtering": "正在滤波预览...",
     "status.complete": "预览完成。",
@@ -162,9 +164,9 @@ const TRANSLATIONS = {
   en: {
     "app.kicker": "Simulation Console",
     "app.title": "Mock Signal Setup",
-    "app.subtitle": "Mock source, processing parameters, and waveform preview.",
+    "app.subtitle": "Choose a clear breathing scenario, then open realtime monitoring to inspect the algorithm.",
     "language.label": "Language",
-    "button.applyMock": "Apply To Mock Source",
+    "button.applyMock": "Apply and Start Demo",
     "button.preview": "Generate Preview",
     "button.useScenario": "Load Preset",
     "field.scenario": "Preset",
@@ -180,15 +182,15 @@ const TRANSLATIONS = {
     "field.peakRatio": "Peak Ratio",
     "field.autoPeak": "Auto peak detection",
     "demo.kicker": "Preset Waveforms",
-    "demo.title": "Breath Waveform Examples",
-    "demo.subtitle": "Raw signal shapes generated from different mock parameters.",
+    "demo.title": "Choose a Breathing Scenario",
+    "demo.subtitle": "Start with normal, shallow, noisy, apnea, and motion artifact scenes to see the filtering and peak-detection boundaries.",
     "demo.selected": "Selected",
     "demo.expand": "Show All",
     "demo.collapse": "Collapse",
     "panel.mockKicker": "Mock Signal",
-    "panel.mockTitle": "Mock Parameters",
+    "panel.mockTitle": "Current Scenario",
     "panel.filterKicker": "Processing",
-    "panel.filterTitle": "Processing Parameters",
+    "panel.filterTitle": "Filter and Peak Detection",
     "metric.bpm": "BPM",
     "metric.quality": "Quality",
     "metric.breaths": "Breaths",
@@ -207,11 +209,11 @@ const TRANSLATIONS = {
     "chart.peaks": "peaks",
     "chart.valleys": "valleys",
     "status.loading": "Loading presets...",
-    "status.loaded": "Presets loaded.",
+    "status.loaded": "Scenarios loaded. Choose one to start the experience.",
     "status.loadingDemos": "Generating waveform examples...",
     "status.demosReady": "Waveform examples updated.",
     "status.apply": "Applying mock parameters...",
-    "status.applied": "Mock parameters applied: {scenario}",
+    "status.applied": "Applied: {scenario}. Opening realtime experience.",
     "status.preview": "Generating preview...",
     "status.filtering": "Filtering preview...",
     "status.complete": "Preview complete.",
@@ -357,14 +359,17 @@ function setStatus(messageOrKey, params = {}) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const requestOptions = {
+    ...options,
     headers: {
       ...SESSION_HEADERS,
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-    ...options,
-  });
+  };
+  const response = await (shared.apiFetch
+    ? shared.apiFetch(path, requestOptions)
+    : fetch(`${API_BASE}${path}`, requestOptions));
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
@@ -423,10 +428,22 @@ function renderScenarioOptions() {
   }
 }
 
+function sortScenariosForDemo(items) {
+  const rank = new Map(FEATURED_SCENARIOS.map((name, index) => [name, index]));
+  return [...items].sort((left, right) => {
+    const leftRank = rank.has(left.name) ? rank.get(left.name) : FEATURED_SCENARIOS.length;
+    const rightRank = rank.has(right.name) ? rank.get(right.name) : FEATURED_SCENARIOS.length;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+    return left.name.localeCompare(right.name);
+  });
+}
+
 async function loadScenarios() {
   setStatus("status.loading");
   const result = await request("/mock/scenarios");
-  scenarios = result.data;
+  scenarios = sortScenariosForDemo(result.data || []);
   renderScenarioOptions();
   if (scenarios.length > 0) {
     selectScenario(scenarios[0].name);
@@ -519,6 +536,7 @@ async function applyMockConfig() {
   });
   fillScenario(result.data);
   setStatus("status.applied", { scenarioId: result.data.scenario });
+  window.parent?.postMessage({ type: "RespiraScope-open-monitor", startDemo: true }, window.location.origin);
 }
 
 async function previewAndFilter() {

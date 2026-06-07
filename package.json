@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "build:console": "vite build --config frontend-console/vite.config.mjs"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "vite": "^7.2.7"
+  }
+}

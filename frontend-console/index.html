@@ -4,69 +4,13 @@
     <meta charset="UTF-8" />
     <meta http-equiv="Cache-Control" content="no-store" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Breath Console</title>
-    <link rel="stylesheet" href="./styles.css?v=console-tabs-20260515-workbench" />
+    <title>RespiraScope Experience</title>
+    <link rel="stylesheet" href="./styles.css?v=console-react-20260605" />
   </head>
   <body>
-    <main class="console-shell">
-      <header class="console-topbar">
-        <div class="console-brand">
-          <span class="brand-mark" aria-hidden="true">B</span>
-          <div class="brand-copy">
-            <span id="consoleKicker" class="eyebrow">Breath Console</span>
-            <h1 id="consoleTitle">呼吸控制台</h1>
-          </div>
-        </div>
-        <nav class="tab-list" aria-label="Breath console tabs">
-          <button id="monitorTab" class="tab-button active" type="button" data-tab="monitor">呼吸监测</button>
-          <button id="labTab" class="tab-button" type="button" data-tab="lab">模拟信号设置</button>
-          <button id="guideTab" class="tab-button" type="button" data-tab="guide">使用说明</button>
-          <button id="apiDocsTab" class="tab-button" type="button" data-tab="apiDocs">接口说明</button>
-        </nav>
-        <div class="console-actions">
-          <label class="language-field">
-            <span id="languageLabel">语言</span>
-            <select id="languageSelect">
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-        </div>
-      </header>
-
-      <section id="disabledPanel" class="disabled-panel" hidden>
-        <h2 id="disabledTitle">没有可用前端</h2>
-        <p id="disabledText">请检查配置文件中的 [console]、[monitor] 和 [lab] 开关。</p>
-      </section>
-
-      <section class="tab-stage">
-        <iframe
-          id="monitorFrame"
-          class="tab-frame active"
-          title="Breath Monitor"
-          data-src="/monitor/index.html"
-        ></iframe>
-        <iframe
-          id="labFrame"
-          class="tab-frame"
-          title="Mock Signal Setup"
-          data-src="/lab/index.html"
-        ></iframe>
-        <iframe
-          id="guideFrame"
-          class="tab-frame"
-          title="Breath Guide"
-          data-src="/guide/index.html"
-        ></iframe>
-        <iframe
-          id="apiDocsFrame"
-          class="tab-frame"
-          title="Integration API"
-          data-src="/api-docs/index.html"
-        ></iframe>
-      </section>
-    </main>
+    <div id="root"></div>
     <script src="./runtime-config.js"></script>
-    <script type="module" src="./app.js?v=console-tabs-20260515-workbench"></script>
+    <script src="./shared/runtime.js?v=shared-runtime-20260605"></script>
+    <script type="module" src="./assets/console.js?v=console-react-20260605"></script>
   </body>
 </html>
