@@ -150,6 +150,8 @@ def create_static_server(directory: str, host: str, port: int, app_config: AppCo
         frontend_roots = {
             "lab": frontend_directory("frontend-lab"),
             "monitor": frontend_directory("frontend-monitor"),
+            "guide": frontend_directory("frontend-guide"),
+            "api-docs": frontend_directory("frontend-api-docs"),
         }
     handler = partial(
         ConfigStaticHandler,

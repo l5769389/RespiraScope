@@ -229,6 +229,16 @@ p {
   color: var(--blue);
 }
 
+.status-pill.info {
+  color: #276749;
+  background: #edfdf7;
+  border-color: #b7ead5;
+}
+
+.status-pill.info strong {
+  color: #276749;
+}
+
 .status-pill.warn {
   color: var(--amber);
   background: var(--amber-soft);
@@ -290,6 +300,26 @@ p {
 .experience-copy {
   display: grid;
   gap: 8px;
+}
+
+.inline-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 720px;
+  padding: 8px 10px;
+  border: 1px solid #f3b2c1;
+  border-radius: 8px;
+  background: #fff1f4;
+  color: #9f1239;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.inline-alert svg {
+  flex: 0 0 auto;
 }
 
 .quick-actions {

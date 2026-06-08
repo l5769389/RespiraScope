@@ -1,20 +1,25 @@
 import logging
 
 
+class RespiraScopeFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        message = super().format(record)
+        if record.levelno >= logging.WARNING:
+            return f"[RespiraScope] {record.levelname}: {message}"
+        return f"[RespiraScope] {message}"
+
+
 def setup_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    logger.propagate = False
 
     if not logger.handlers:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
+        handler.setFormatter(RespiraScopeFormatter("%(message)s"))
         logger.addHandler(handler)
 
     return logger
 
 
-# 在文件顶部
 logger = setup_logger(__name__)

@@ -5,19 +5,15 @@
     <meta http-equiv="Cache-Control" content="no-store" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Breath Monitor</title>
-    <link rel="stylesheet" href="./styles.css?v=monitor-experience-20260605" />
+    <link rel="stylesheet" href="./styles.css?v=monitor-ui-20260608" />
   </head>
   <body>
     <main class="monitor-shell">
       <header class="topbar">
         <div class="page-heading">
-          <span class="eyebrow">Realtime Monitor</span>
-          <h1 data-i18n="monitor.title">呼吸监测</h1>
-          <p data-i18n="chart.realtimeSubtitle">后端实时发送的原始、滤波、波峰与波谷信号</p>
-        </div>
-        <div class="state-pill">
-          <span data-i18n="statusPanel.status">状态</span>
-          <strong id="connectionStatus" data-status-key="connection.disconnected">未连接</strong>
+          <span class="eyebrow">4D Acquisition Monitor</span>
+          <h1 data-i18n="monitor.title">4D 呼吸采集监测</h1>
+          <p data-i18n="chart.realtimeSubtitle">实时处理患者呼吸信号，辅助观察节律、记录片段并标记扫描区间</p>
         </div>
       </header>
 
@@ -87,6 +83,11 @@
 
         <aside class="side-panel">
           <section class="status-grid">
+            <article id="connectionCard" class="connection-card" data-connection="idle">
+              <span data-i18n="statusPanel.status">状态</span>
+              <strong id="connectionStatus" data-status-key="connection.disconnected" aria-live="polite">未连接</strong>
+              <small data-i18n="statusPanel.statusHint">连接后状态会随数据流自动更新</small>
+            </article>
             <article class="metric-primary">
               <span>BPM</span>
               <strong id="bpmValue">-</strong>
@@ -111,14 +112,32 @@
             </article>
           </section>
 
-          <section class="record-workflow" aria-label="Record workflow">
-            <h2 data-i18n="record.title">记录片段</h2>
-            <div class="workflow-steps">
-              <span>未记录</span>
-              <span>记录中</span>
-              <span>扫描标记</span>
-              <span>离线复算</span>
-              <span>保存回看</span>
+          <section class="usage-guide" aria-label="Monitor usage guide">
+            <div class="side-section-title">
+              <span class="eyebrow" data-i18n="guide.kicker">Guide</span>
+              <h2 data-i18n="guide.title">使用说明</h2>
+            </div>
+            <div class="guide-list">
+              <article>
+                <strong data-i18n="guide.startTitle">开始监测</strong>
+                <span data-i18n="guide.startText">连接后端并开始接收实时呼吸波形。</span>
+              </article>
+              <article>
+                <strong data-i18n="guide.recordStartTitle">开始记录</strong>
+                <span data-i18n="guide.recordStartText">从当前时刻截取片段，记录区间会在实时图上高亮。</span>
+              </article>
+              <article>
+                <strong data-i18n="guide.scanTitle">扫描标记</strong>
+                <span data-i18n="guide.scanText">记录过程中标记重点时间段，便于回看定位。</span>
+              </article>
+              <article>
+                <strong data-i18n="guide.recordEndTitle">结束记录</strong>
+                <span data-i18n="guide.recordEndText">停止片段采集，完成后置缓冲和离线滤波后生成记录图。</span>
+              </article>
+              <article>
+                <strong data-i18n="guide.saveLoadTitle">保存 / 加载</strong>
+                <span data-i18n="guide.saveLoadText">保存当前片段为 JSON，或加载历史片段进行回看。</span>
+              </article>
             </div>
           </section>
 
@@ -160,6 +179,6 @@
     <script src="../shared/runtime.js?v=shared-runtime-20260605"></script>
     <script src="./vendor/socket.io.min.js"></script>
     <script src="./vendor/echarts.min.js"></script>
-    <script type="module" src="./app.js?v=monitor-experience-20260605"></script>
+    <script type="module" src="./app.js?v=monitor-ui-20260608"></script>
   </body>
 </html>

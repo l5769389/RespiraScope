@@ -4,6 +4,7 @@ import time
 from typing import Set
 
 from ct_breath.config import AppConfig, get_config
+from ct_breath.logger import logger
 from ct_breath.mock_sensor.breath_simulator import mock_breath_controller
 
 
@@ -22,11 +23,13 @@ class AsyncSimulateSensor:
         self.port = self.config.sensor_port
         self.server = None
         self.running = False
+        self.stopped = False
         self.clients: Set[asyncio.StreamWriter] = set()
         self.client_tasks: Set[asyncio.Task] = set()
 
     async def start(self):
         self.running = True
+        self.stopped = False
 
         try:
             self.server = await asyncio.start_server(
@@ -35,19 +38,19 @@ class AsyncSimulateSensor:
                 self.port,
             )
 
-            print(f"Mock Gateway Signal Server TCP server is running on {self.host}:{self.port}")
+            logger.info("Mock TCP signal server listening on %s:%s", self.host, self.port)
 
             async with self.server:
                 await self.server.serve_forever()
 
         except Exception as e:
-            print(f"Server error: {e}")
+            logger.warning("Mock TCP signal server stopped: %s", e)
         finally:
             await self.stop()
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         client_address = writer.get_extra_info("peername")
-        print(f"Client connected from {client_address}")
+        logger.debug("Mock TCP client connected from %s", client_address)
 
         self.clients.add(writer)
         signal_task = asyncio.create_task(self.send_signal_loop(writer))
@@ -62,11 +65,11 @@ class AsyncSimulateSensor:
                 except asyncio.TimeoutError:
                     continue
                 except Exception as e:
-                    print(f"Error reading from client: {e}")
+                    logger.debug("Mock TCP client read failed: %s", e)
                     break
 
         except Exception as e:
-            print(f"Client handling error: {e}")
+            logger.debug("Mock TCP client handler failed: %s", e)
         finally:
             await self.disconnect_client(writer, signal_task)
 
@@ -97,7 +100,7 @@ class AsyncSimulateSensor:
                     await asyncio.sleep(delay_seconds)
 
             except Exception as e:
-                print(f"Mock breath gather message send failed: {e}")
+                logger.debug("Mock TCP signal send failed: %s", e)
                 break
 
     async def disconnect_client(self, writer: asyncio.StreamWriter, signal_task: asyncio.Task):
@@ -111,12 +114,15 @@ class AsyncSimulateSensor:
         try:
             writer.close()
             await writer.wait_closed()
-            print("Client disconnected")
+            logger.debug("Mock TCP client disconnected")
         except Exception as e:
-            print(f"Error closing client connection: {e}")
+            logger.debug("Mock TCP client close failed: %s", e)
 
     async def stop(self):
-        print("Stopping Mock Gateway Signal Server...")
+        if self.stopped:
+            return
+        self.stopped = True
+        should_log = self.running or self.server is not None or bool(self.clients)
         self.running = False
 
         for task in list(self.client_tasks):
@@ -127,7 +133,7 @@ class AsyncSimulateSensor:
                 writer.close()
                 await writer.wait_closed()
             except Exception as e:
-                print(f"Error closing client: {e}")
+                logger.debug("Mock TCP client close failed: %s", e)
 
         self.clients.clear()
         self.client_tasks.clear()
@@ -135,13 +141,12 @@ class AsyncSimulateSensor:
         if self.server:
             self.server.close()
             await self.server.wait_closed()
+            self.server = None
+
+        if should_log:
+            logger.info("Mock TCP signal server stopped")
 
 
 async def async_sensor_start(config: AppConfig | None = None):
     simulate_sensor = AsyncSimulateSensor(config)
-    try:
-        await simulate_sensor.start()
-    except KeyboardInterrupt:
-        print("\nReceived interrupt signal")
-    finally:
-        await simulate_sensor.stop()
+    await simulate_sensor.start()

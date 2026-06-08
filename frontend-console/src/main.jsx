@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, FlaskConical, Play, Server, SlidersHorizontal, Wifi } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  FlaskConical,
+  Play,
+  Server,
+  ShieldCheck,
+  SlidersHorizontal,
+  Wifi,
+} from "lucide-react";
 
 const shared = window.RespiraScopeShared || {};
 const runtimeConfig = shared.runtimeConfig || window.CT_BREATH_RUNTIME_CONFIG || {};
@@ -8,8 +17,8 @@ const LANGUAGE_KEY = shared.languageKey || "RespiraScope-language";
 
 const TEXT = {
   zh: {
-    appTitle: "呼吸信号实时体验台",
-    appSubtitle: "用可重复的模拟呼吸信号理解滤波、峰谷识别、BPM 和记录回看流程。",
+    appTitle: "4D 呼吸采集辅助算法",
+    appSubtitle: "面向 4D 检查中的患者呼吸采集，把呼吸信号处理成可用于观察节律、评估稳定性和标记扫描区间的实时结果。",
     language: "语言",
     backend: "后端",
     backendChecking: "检查中",
@@ -19,24 +28,27 @@ const TEXT = {
     dataSourceMock: "模拟信号",
     dataSourceSensor: "真实设备",
     dataSourceDisabled: "未启用",
-    heroKicker: "Cloud Demo",
-    heroTitle: "先用模拟信号理解项目能力",
-    heroText: "公网访问者通常没有真实传感器，所以默认从正常呼吸、浅呼吸、噪声干扰、屏气和体动伪影开始体验。",
-    startDemo: "开始模拟体验",
-    openMonitor: "查看实时监测",
-    openLab: "调整模拟场景",
-    monitor: "实时体验",
-    monitorText: "实时曲线、BPM、记录和扫描",
-    lab: "模拟实验",
-    labText: "选择场景并预览滤波效果",
-    monitorFrameTitle: "RespiraScope 实时监测",
-    labFrameTitle: "RespiraScope 模拟实验",
+    session: "会话",
+    sessionIsolated: "本标签页独立",
+    offlineHint: "后端暂不可达，请确认启动窗口中的 Backend API 地址和服务状态。",
+    heroKicker: "Algorithm Workflow",
+    heroTitle: "从呼吸波形到 4D 采集可用的节律信息",
+    heroText: "系统完成实时信号接收、滤波降噪、峰谷识别、BPM 估计、记录片段、扫描标记和离线复算，帮助快速判断呼吸采集过程是否稳定、是否可回看。",
+    startDemo: "查看算法演示",
+    openMonitor: "进入实时监测",
+    openLab: "调整模拟参数",
+    monitor: "4D 采集监测",
+    monitorText: "波形、BPM、记录片段和扫描标记",
+    lab: "模拟与滤波",
+    labText: "配置呼吸场景并观察滤波效果",
+    monitorFrameTitle: "RespiraScope 4D 呼吸采集监测",
+    labFrameTitle: "RespiraScope 模拟与滤波",
     disabledTitle: "没有可用前端",
     disabledText: "请检查配置文件中的 [console]、[monitor] 和 [lab] 开关。",
   },
   en: {
-    appTitle: "Realtime Breath Signal Experience",
-    appSubtitle: "Use repeatable mock breath signals to inspect filtering, peak detection, BPM, and recording review.",
+    appTitle: "4D Respiratory Acquisition Algorithm",
+    appSubtitle: "For patient respiratory acquisition in 4D imaging, RespiraScope turns breath signals into realtime rhythm, stability, and scan-marker information.",
     language: "Language",
     backend: "Backend",
     backendChecking: "Checking",
@@ -46,18 +58,21 @@ const TEXT = {
     dataSourceMock: "Mock Signal",
     dataSourceSensor: "Physical Sensor",
     dataSourceDisabled: "Disabled",
-    heroKicker: "Cloud Demo",
-    heroTitle: "Start with a repeatable mock signal",
-    heroText: "Most cloud visitors do not have the physical sensor, so the experience starts with normal, shallow, noisy, apnea, and motion artifact scenes.",
-    startDemo: "Start Mock Demo",
+    session: "Session",
+    sessionIsolated: "This tab only",
+    offlineHint: "Backend is unreachable. Check the Backend API address and service status in the startup window.",
+    heroKicker: "Algorithm Workflow",
+    heroTitle: "From breath waveform to 4D acquisition-ready rhythm data",
+    heroText: "The system handles realtime signal intake, denoising, peak and valley detection, BPM estimation, segment recording, scan markers, and offline recalculation so the acquisition process can be reviewed.",
+    startDemo: "View Algorithm Demo",
     openMonitor: "Open Monitor",
-    openLab: "Tune Scenario",
-    monitor: "Realtime Experience",
-    monitorText: "Live waveform, BPM, recording, and scan markers",
-    lab: "Simulation Lab",
-    labText: "Choose scenarios and preview filtering",
-    monitorFrameTitle: "RespiraScope realtime monitor",
-    labFrameTitle: "RespiraScope mock lab",
+    openLab: "Tune Simulation",
+    monitor: "4D Acquisition Monitor",
+    monitorText: "Waveform, BPM, recorded segments, and scan markers",
+    lab: "Simulation & Filtering",
+    labText: "Configure breath scenarios and inspect filtering",
+    monitorFrameTitle: "RespiraScope 4D respiratory acquisition monitor",
+    labFrameTitle: "RespiraScope simulation and filtering",
     disabledTitle: "No frontend is enabled",
     disabledText: "Check [console], [monitor], and [lab] in the config file.",
   },
@@ -279,6 +294,7 @@ function App() {
     : runtimeConfig.mockSignalEnabled === false
       ? `${t("dataSourceSensor")} ${runtimeConfig.sensorHost || ""}:${runtimeConfig.sensorPort || ""}`
       : t("dataSourceDisabled");
+  const sessionText = shared.sessionId ? t("sessionIsolated") : "-";
   const noFrontend = !modes.monitor && !modes.lab;
 
   return (
@@ -305,6 +321,12 @@ function App() {
             value={sourceText}
             tone={mockEnabled ? "ok" : runtimeConfig.mockSignalEnabled === false ? "sensor" : "warn"}
           />
+          <StatusPill
+            icon={ShieldCheck}
+            label={t("session")}
+            value={sessionText}
+            tone="info"
+          />
           <label className="language-field">
             <span>{t("language")}</span>
             <select value={language} onChange={(event) => updateLanguage(event.target.value)}>
@@ -320,6 +342,12 @@ function App() {
           <span className="eyebrow">{t("heroKicker")}</span>
           <h2>{t("heroTitle")}</h2>
           <p>{t("heroText")}</p>
+          {backendState === "offline" && (
+            <div className="inline-alert" role="status">
+              <AlertTriangle aria-hidden="true" size={17} strokeWidth={2.5} />
+              <span>{t("offlineHint")}</span>
+            </div>
+          )}
         </div>
         <div className="quick-actions">
           <button type="button" onClick={startMockDemo}>

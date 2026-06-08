@@ -10,6 +10,7 @@ from ct_breath.config import AppConfig, get_config
 from ct_breath.http.http_service import create_routes
 from ct_breath.logger import logger
 from ct_breath.mock_sensor.async_sensor import async_sensor_start
+from ct_breath.ports import is_port_available
 from ct_breath.session import SessionManager
 from ct_breath.socket_io_service import set_session_touch_callback, sio
 
@@ -20,12 +21,25 @@ def lifespan_for(app_config: AppConfig):
         tasks = []
 
         try:
-            logger.info("Starting background tasks...")
+            logger.info("Starting background services")
 
             if app_config.enable_mock_signal:
-                mock_sensor_task = asyncio.create_task(async_sensor_start(app_config))
-                tasks.append(mock_sensor_task)
-                logger.info("Mock signal server enabled")
+                if is_port_available(app_config.mock_signal_bind_host, app_config.sensor_port):
+                    mock_sensor_task = asyncio.create_task(async_sensor_start(app_config))
+                    tasks.append(mock_sensor_task)
+                    logger.info(
+                        "Mock TCP signal server: tcp://%s:%s",
+                        app_config.mock_signal_bind_host,
+                        app_config.sensor_port,
+                    )
+                else:
+                    logger.warning(
+                        "Mock TCP signal server skipped because %s:%s is not available. "
+                        "Browser sessions still use isolated direct mock data; free the port "
+                        "or change [sensor].port only if legacy TCP clients need it.",
+                        app_config.mock_signal_bind_host,
+                        app_config.sensor_port,
+                    )
             else:
                 logger.info("Mock signal server disabled")
 
@@ -36,7 +50,7 @@ def lifespan_for(app_config: AppConfig):
             tasks.append(cleanup_task)
             set_session_touch_callback(app.state.session_manager.touch)
 
-            logger.info("All background tasks started")
+            logger.info("Background services ready")
             yield
 
         except Exception as e:

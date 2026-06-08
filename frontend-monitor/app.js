@@ -103,7 +103,7 @@ function apiFetch(path, options = {}) {
 }
 const TRANSLATIONS = {
   zh: {
-    "monitor.title": "呼吸监测",
+    "monitor.title": "4D 呼吸采集监测",
     "language.label": "语言",
     "button.startMonitoring": "开始监测",
     "button.recordStart": "开始记录",
@@ -118,7 +118,7 @@ const TRANSLATIONS = {
     "follow.live": "实时跟随",
     "follow.review": "回看模式",
     "chart.realtimeTitle": "实时波形",
-    "chart.realtimeSubtitle": "后端实时发送的原始、滤波、波峰与波谷信号",
+    "chart.realtimeSubtitle": "实时处理患者呼吸信号，辅助观察节律、记录片段并标记扫描区间",
     "field.smoothing": "平滑",
     "field.confirmPeaks": "延迟确认峰谷",
     "smoothing.auto": "自动",
@@ -133,6 +133,7 @@ const TRANSLATIONS = {
     "legend.recorded": "记录区间",
     "legend.scan": "扫描区间",
     "statusPanel.status": "状态",
+    "statusPanel.statusHint": "连接后状态会随数据流自动更新",
     "statusPanel.stability": "稳定性",
     "statusPanel.intervalCv": "间隔 CV",
     "statusPanel.rawPoints": "原始点数",
@@ -142,6 +143,18 @@ const TRANSLATIONS = {
     "details.recordFileHint": "保存或加载一段记录",
     "details.lastUpdate": "最后更新",
     "record.title": "记录片段",
+    "guide.kicker": "Guide",
+    "guide.title": "使用说明",
+    "guide.startTitle": "开始监测",
+    "guide.startText": "连接后端并开始接收实时呼吸波形。",
+    "guide.recordStartTitle": "开始记录",
+    "guide.recordStartText": "从当前时刻截取片段，记录区间会在实时图上高亮。",
+    "guide.scanTitle": "扫描标记",
+    "guide.scanText": "记录过程中标记重点时间段，便于回看定位。",
+    "guide.recordEndTitle": "结束记录",
+    "guide.recordEndText": "停止片段采集，完成后置缓冲和离线滤波后生成记录图。",
+    "guide.saveLoadTitle": "保存 / 加载",
+    "guide.saveLoadText": "保存当前片段为 JSON，或加载历史片段进行回看。",
     "connection.disconnected": "未连接",
     "connection.connected": "已连接",
     "connection.error": "连接错误",
@@ -207,7 +220,7 @@ const TRANSLATIONS = {
     "duration.minutesSeconds": "{minutes}m {seconds}s",
   },
   en: {
-    "monitor.title": "Breath Monitor",
+    "monitor.title": "4D Respiratory Acquisition Monitor",
     "language.label": "Language",
     "button.startMonitoring": "Start Monitoring",
     "button.recordStart": "Record Start",
@@ -222,7 +235,7 @@ const TRANSLATIONS = {
     "follow.live": "Live Follow",
     "follow.review": "Review Mode",
     "chart.realtimeTitle": "Realtime Waveform",
-    "chart.realtimeSubtitle": "Live raw, filtered, peak, and valley signals",
+    "chart.realtimeSubtitle": "Process patient respiratory signals in realtime, observe rhythm, record segments, and mark scan ranges",
     "field.smoothing": "Smoothing",
     "field.confirmPeaks": "Confirm Peaks",
     "smoothing.auto": "Auto",
@@ -237,6 +250,7 @@ const TRANSLATIONS = {
     "legend.recorded": "Recorded range",
     "legend.scan": "Scan range",
     "statusPanel.status": "Status",
+    "statusPanel.statusHint": "Status updates automatically once data is flowing",
     "statusPanel.stability": "Stability",
     "statusPanel.intervalCv": "Interval CV",
     "statusPanel.rawPoints": "Raw Points",
@@ -246,6 +260,18 @@ const TRANSLATIONS = {
     "details.recordFileHint": "save or load a recorded segment",
     "details.lastUpdate": "Last Update",
     "record.title": "Recorded Segment",
+    "guide.kicker": "Guide",
+    "guide.title": "How to use",
+    "guide.startTitle": "Start Monitoring",
+    "guide.startText": "Connect to the backend and receive the live breathing waveform.",
+    "guide.recordStartTitle": "Record Start",
+    "guide.recordStartText": "Capture a segment from now; the range is highlighted on the live chart.",
+    "guide.scanTitle": "Scan Marker",
+    "guide.scanText": "Mark important intervals during recording for easier review later.",
+    "guide.recordEndTitle": "Record End",
+    "guide.recordEndText": "Stop capture, keep the post buffer, run offline filtering, and render the record chart.",
+    "guide.saveLoadTitle": "Save / Load",
+    "guide.saveLoadText": "Save the current segment as JSON or load a previous segment for review.",
     "connection.disconnected": "Disconnected",
     "connection.connected": "Connected",
     "connection.error": "Connection Error",
@@ -376,6 +402,7 @@ const dom = {
   loadRecordInput: document.querySelector("#loadRecordInput"),
   smoothingSelect: document.querySelector("#smoothingSelect"),
   confirmRealtimeEvents: document.querySelector("#confirmRealtimeEvents"),
+  connectionCard: document.querySelector("#connectionCard"),
   connectionStatus: document.querySelector("#connectionStatus"),
   bpmValue: document.querySelector("#bpmValue"),
   qualityValue: document.querySelector("#qualityValue"),
@@ -417,6 +444,16 @@ function setConnectionStatus(key, params = {}) {
   dom.connectionStatus.dataset.statusKey = key;
   dom.connectionStatus.dataset.statusParams = JSON.stringify(params);
   dom.connectionStatus.textContent = t(key, params);
+  if (dom.connectionCard) {
+    const status = key === "connection.receiving" || key === "connection.connected"
+      ? "receiving"
+      : key === "connection.waiting" || key === "connection.noRecentData"
+        ? "waiting"
+        : key === "connection.disconnected"
+          ? "idle"
+          : "alert";
+    dom.connectionCard.dataset.connection = status;
+  }
 }
 
 function getCurrentLanguage() {
