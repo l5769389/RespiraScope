@@ -19,6 +19,15 @@ export function createChartModule(ctx) {
 
   const chart = echarts.init(dom.waveChart);
   const recordChart = echarts.init(dom.recordChart);
+  const MOBILE_DISPLAY_WINDOW = Math.min(DISPLAY_WINDOW, 620);
+
+  function isCompactViewport() {
+    return window.matchMedia?.("(max-width: 640px)")?.matches ?? window.innerWidth <= 640;
+  }
+
+  function liveDisplayWindow() {
+    return isCompactViewport() ? MOBILE_DISPLAY_WINDOW : DISPLAY_WINDOW;
+  }
 
   function roundDownToHundred(value) {
     return Math.floor(value / 100) * 100;
@@ -329,11 +338,12 @@ export function createChartModule(ctx) {
 
   function liveBounds() {
     const latestX = latestSequenceFrom(state);
-    const followPoint = DISPLAY_WINDOW * (1 - LIVE_RIGHT_PADDING_RATIO);
+    const displayWindow = liveDisplayWindow();
+    const followPoint = displayWindow * (1 - LIVE_RIGHT_PADDING_RATIO);
     const minX = latestX <= followPoint ? 0 : Math.max(0, latestX - followPoint);
     return {
       minX,
-      maxX: minX + DISPLAY_WINDOW,
+      maxX: minX + displayWindow,
     };
   }
 
@@ -402,35 +412,39 @@ export function createChartModule(ctx) {
     const raw = withGapBreaks(source.raw);
     const filtered = smoothSeries(source.filtered);
     const isLive = mode === "live";
+    const compact = isCompactViewport();
     const markArea = recordMarkArea(options.recordRange);
-    const maxX = isLive ? options.maxX ?? DISPLAY_WINDOW : undefined;
+    const maxX = isLive ? options.maxX ?? liveDisplayWindow() : undefined;
     const yAxisBounds =
       options.yAxisBounds ?? (isLive ? { min: 0, max: Y_AXIS_MIN_SPAN } : paddedAxis(valueExtent([raw, filtered])));
+    const insideZoom = {
+      id: "inside",
+      type: "inside",
+      xAxisIndex: 0,
+      filterMode: "none",
+      zoomOnMouseWheel: true,
+      moveOnMouseMove: true,
+      moveOnMouseWheel: false,
+      preventDefaultMouseMove: true,
+    };
     const dataZoom = isLive
       ? [
-          {
-            id: "inside",
-            type: "inside",
-            xAxisIndex: 0,
-            filterMode: "none",
-          },
+          insideZoom,
         ]
       : [
-          {
-            id: "inside",
-            type: "inside",
-            xAxisIndex: 0,
-            filterMode: "none",
-          },
+          insideZoom,
           {
             id: "slider",
             type: "slider",
             xAxisIndex: 0,
             filterMode: "none",
-            height: 24,
-            bottom: 14,
+            height: compact ? 34 : 24,
+            bottom: compact ? 10 : 14,
             borderColor: "#d9e2ef",
             fillerColor: "rgba(37, 99, 235, 0.12)",
+            handleSize: compact ? "96%" : "80%",
+            moveHandleSize: compact ? 14 : 8,
+            showDetail: !compact,
             handleStyle: {
               color: "#ffffff",
               borderColor: "#2563eb",
@@ -451,10 +465,10 @@ export function createChartModule(ctx) {
     return {
       animation: false,
       grid: {
-        left: 52,
-        right: 28,
-        top: 34,
-        bottom: isLive ? 44 : 72,
+        left: compact ? 42 : 52,
+        right: compact ? 12 : 28,
+        top: compact ? 26 : 34,
+        bottom: isLive ? (compact ? 32 : 44) : (compact ? 64 : 72),
       },
       tooltip: {
         trigger: "axis",
@@ -477,7 +491,7 @@ export function createChartModule(ctx) {
         type: "value",
         min: isLive ? options.minX : undefined,
         max: isLive ? maxX : undefined,
-        minInterval: 100,
+        minInterval: compact ? 50 : 100,
         scale: true,
         axisLine: {
           lineStyle: {
@@ -614,7 +628,7 @@ export function createChartModule(ctx) {
   function scheduleRender(force = false) {
     if (force) {
       state.renderScheduled = false;
-      render();
+      render({ force: true });
       return;
     }
     if (state.renderScheduled) {
@@ -627,8 +641,8 @@ export function createChartModule(ctx) {
     });
   }
 
-  function render() {
-    if (state.paused) {
+  function render({ force = false } = {}) {
+    if (state.paused && !force) {
       return;
     }
 
@@ -690,8 +704,8 @@ export function createChartModule(ctx) {
   }
 
   function updateFollowButton() {
-    dom.followBtn.textContent = state.followLive ? t("follow.live") : t("follow.review");
-    dom.followBtn.classList.toggle("active", state.followLive);
+    dom.followBtn.textContent = state.followLive ? t("follow.enterReview") : t("follow.returnLive");
+    dom.followBtn.classList.toggle("active", !state.followLive);
   }
 
   function enterReviewMode() {
@@ -700,6 +714,13 @@ export function createChartModule(ctx) {
     }
     state.pendingReviewRange = liveBounds();
     state.followLive = false;
+    updateFollowButton();
+    scheduleRender(true);
+  }
+
+  function exitReviewMode() {
+    state.pendingReviewRange = null;
+    state.followLive = true;
     updateFollowButton();
     scheduleRender(true);
   }
@@ -730,6 +751,7 @@ export function createChartModule(ctx) {
     chart,
     clearCharts,
     enterReviewMode,
+    exitReviewMode,
     firstSequenceFrom,
     formatSample,
     latestSequenceFrom,

@@ -62,6 +62,11 @@ const SCENARIO_THEME = {
   cough_artifact: { color: "#0f766e", soft: "#ecfdf5" },
 };
 const FALLBACK_THEME = { color: "#2563eb", soft: "#e8f0ff" };
+const ICONS = {
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>',
+  chevronUp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg>',
+  waveform: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2.2-7 4.4 14 3.2-7H21"></path></svg>',
+};
 
 function getSessionId() {
   const existing = sessionStorage.getItem(SESSION_KEY);
@@ -83,7 +88,6 @@ const TRANSLATIONS = {
     "language.label": "语言",
     "button.applyMock": "应用并开始体验",
     "button.preview": "生成预览",
-    "button.useScenario": "载入预设",
     "field.scenario": "模拟预设",
     "field.bpm": "BPM",
     "field.amplitude": "幅度",
@@ -102,6 +106,9 @@ const TRANSLATIONS = {
     "demo.selected": "已选",
     "demo.expand": "展开全部",
     "demo.collapse": "收起",
+    "demo.viewWaveform": "查看波形",
+    "demo.hideWaveform": "收起波形",
+    "demo.chooseScenario": "选择预设",
     "panel.mockKicker": "模拟信号",
     "panel.mockTitle": "当前场景",
     "panel.filterKicker": "处理",
@@ -168,7 +175,6 @@ const TRANSLATIONS = {
     "language.label": "Language",
     "button.applyMock": "Apply and Start Demo",
     "button.preview": "Generate Preview",
-    "button.useScenario": "Load Preset",
     "field.scenario": "Preset",
     "field.bpm": "BPM",
     "field.amplitude": "Amplitude",
@@ -187,6 +193,9 @@ const TRANSLATIONS = {
     "demo.selected": "Selected",
     "demo.expand": "Show All",
     "demo.collapse": "Collapse",
+    "demo.viewWaveform": "View Waveform",
+    "demo.hideWaveform": "Hide Waveform",
+    "demo.chooseScenario": "Choose Preset",
     "panel.mockKicker": "Mock Signal",
     "panel.mockTitle": "Current Scenario",
     "panel.filterKicker": "Processing",
@@ -252,6 +261,7 @@ const elements = {
   languageSelect: document.querySelector("#languageSelect"),
   toggleDemoGridBtn: document.querySelector("#toggleDemoGridBtn"),
   scenarioSelect: document.querySelector("#scenarioSelect"),
+  selectedScenarioName: document.querySelector("#selectedScenarioName"),
   scenarioDemoGrid: document.querySelector("#scenarioDemoGrid"),
   bpmInput: document.querySelector("#bpmInput"),
   amplitudeInput: document.querySelector("#amplitudeInput"),
@@ -279,6 +289,7 @@ let lastPreviewData = null;
 let lastPreviewMetrics = null;
 let currentStatus = null;
 let demoExpanded = false;
+let expandedScenarioDemos = new Set();
 
 function preferredLanguage() {
   const saved = localStorage.getItem(LANGUAGE_KEY);
@@ -326,6 +337,7 @@ function applyLanguage(nextLanguage = language) {
   });
   renderScenarioOptions();
   renderDemoCards();
+  updateSelectedScenarioName();
   if (lastPreviewData) {
     drawChart(lastPreviewData);
   }
@@ -411,7 +423,20 @@ function selectScenario(name) {
   }
   elements.scenarioSelect.value = name;
   fillScenario(selected.config);
+  updateSelectedScenarioName();
   renderDemoCards();
+}
+
+function updateSelectedScenarioName() {
+  if (!elements.selectedScenarioName) {
+    return;
+  }
+  const current = elements.scenarioSelect.value;
+  elements.selectedScenarioName.textContent = current ? scenarioName(current) : "-";
+}
+
+function demoDetailId(name) {
+  return `demo-detail-${String(name).replace(/[^a-z0-9_-]/gi, "-")}`;
 }
 
 function renderScenarioOptions() {
@@ -480,37 +505,55 @@ function renderDemoCards() {
   scenarios.forEach((item, index) => {
     const theme = scenarioTheme(item.name);
     const active = item.name === elements.scenarioSelect.value;
+    const detailExpanded = expandedScenarioDemos.has(item.name);
     const visible = demoExpanded || index < COLLAPSED_DEMO_COUNT || active;
     if (!visible) {
       return;
     }
-    const card = document.createElement("button");
-    card.type = "button";
+    const detailId = demoDetailId(item.name);
+    const card = document.createElement("article");
+    const toggleLabel = t(detailExpanded ? "demo.hideWaveform" : "demo.viewWaveform");
     card.className = "demo-card";
     card.classList.toggle("active", active);
+    card.classList.toggle("detail-open", detailExpanded);
     card.style.setProperty("--scenario-color", theme.color);
     card.style.setProperty("--scenario-soft", theme.soft);
     card.innerHTML = `
-      <div class="demo-card-header">
-        <div class="demo-title">
-          <strong>${scenarioName(item.name)}</strong>
-          <span>${t("field.scenario")}</span>
+      <div class="demo-card-main">
+        <button class="demo-select-action" type="button" aria-pressed="${active}" aria-label="${t("demo.chooseScenario")}: ${scenarioName(item.name)}">
+          <div class="demo-card-header">
+            <div class="demo-title">
+              <strong>${scenarioName(item.name)}</strong>
+              <span>${scenarioDescription(item.name)}</span>
+            </div>
+            ${active ? `<span class="selected-indicator" aria-label="${t("demo.selected")}" title="${t("demo.selected")}">${ICONS.check}</span>` : ""}
+          </div>
+        </button>
+        <button class="demo-detail-toggle secondary" type="button" aria-label="${toggleLabel}" title="${toggleLabel}" aria-expanded="${detailExpanded}" aria-controls="${detailId}">
+          ${detailExpanded ? ICONS.chevronUp : ICONS.waveform}
+        </button>
+      </div>
+      <div class="demo-card-detail" id="${detailId}">
+        <div class="sparkline-frame">
+          <div class="waveform-meta" aria-hidden="true">
+            <span class="waveform-chip primary"><strong>${Math.round(item.config.bpm)}</strong><small>BPM</small></span>
+            <span class="waveform-chip"><strong>${formatNumber(item.config.amplitude)}</strong><small>${t("stat.amplitude")}</small></span>
+            <span class="waveform-chip"><strong>${formatNumber(item.config.noise, 1)}</strong><small>${t("stat.noise")}</small></span>
+            <span class="waveform-chip"><strong>${formatNumber(item.config.irregularity, 2)}</strong><small>${t("stat.irregularity")}</small></span>
+          </div>
+          <canvas width="300" height="108" aria-hidden="true"></canvas>
         </div>
-        <span class="bpm-badge">${Math.round(item.config.bpm)} BPM</span>
       </div>
-      <div class="sparkline-frame">
-        <canvas width="300" height="108" aria-hidden="true"></canvas>
-      </div>
-      <p>${scenarioDescription(item.name)}</p>
-      <div class="demo-stats">
-        <span>${t("stat.amplitude")} ${formatNumber(item.config.amplitude)}</span>
-        <span>${t("stat.noise")} ${formatNumber(item.config.noise, 1)}</span>
-        <span>${t("stat.irregularity")} ${formatNumber(item.config.irregularity, 2)}</span>
-      </div>
-      ${active ? `<span class="selected-indicator">${t("demo.selected")}</span>` : ""}
-      <small>${t("button.useScenario")}</small>
     `;
-    card.addEventListener("click", () => selectScenario(item.name));
+    card.querySelector(".demo-select-action").addEventListener("click", () => selectScenario(item.name));
+    card.querySelector(".demo-detail-toggle").addEventListener("click", () => {
+      if (expandedScenarioDemos.has(item.name)) {
+        expandedScenarioDemos.delete(item.name);
+      } else {
+        expandedScenarioDemos.add(item.name);
+      }
+      renderDemoCards();
+    });
     elements.scenarioDemoGrid.appendChild(card);
     const canvas = card.querySelector("canvas");
     drawMiniWaveform(canvas, demoWaveforms.get(item.name) || [], theme);

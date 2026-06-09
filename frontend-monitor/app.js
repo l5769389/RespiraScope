@@ -1,5 +1,5 @@
-import { createChartModule } from "./modules/chart.js?v=monitor-scan-20260525-11";
-import { createRecordModule } from "./modules/record.js?v=monitor-scan-20260525-11";
+import { createChartModule } from "./modules/chart.js?v=monitor-mobile-20260609c";
+import { createRecordModule } from "./modules/record.js?v=monitor-mobile-20260609c";
 import { createSocketModule } from "./modules/socket.js?v=monitor-scan-20260525-11";
 import { createStatusModule } from "./modules/status.js?v=monitor-scan-20260525-11";
 
@@ -117,6 +117,8 @@ const TRANSLATIONS = {
     "button.reset": "重置",
     "follow.live": "实时跟随",
     "follow.review": "回看模式",
+    "follow.enterReview": "回看波形",
+    "follow.returnLive": "回到实时",
     "chart.realtimeTitle": "实时波形",
     "chart.realtimeSubtitle": "实时处理患者呼吸信号，辅助观察节律、记录片段并标记扫描区间",
     "field.smoothing": "平滑",
@@ -132,8 +134,8 @@ const TRANSLATIONS = {
     "legend.valley": "波谷",
     "legend.recorded": "记录区间",
     "legend.scan": "扫描区间",
-    "statusPanel.status": "状态",
-    "statusPanel.statusHint": "连接后状态会随数据流自动更新",
+    "statusPanel.status": "数据状态",
+    "statusPanel.statusHint": "",
     "statusPanel.stability": "稳定性",
     "statusPanel.intervalCv": "间隔 CV",
     "statusPanel.rawPoints": "原始点数",
@@ -143,6 +145,15 @@ const TRANSLATIONS = {
     "details.recordFileHint": "保存或加载一段记录",
     "details.lastUpdate": "最后更新",
     "record.title": "记录片段",
+    "record.details": "详情",
+    "record.detailsTitle": "记录详情",
+    "record.close": "关闭",
+    "record.detail.status": "状态",
+    "record.detail.duration": "时长",
+    "record.detail.index": "索引",
+    "record.detail.scan": "扫描",
+    "record.detail.time": "时间",
+    "record.detail.points": "点数",
     "guide.kicker": "Guide",
     "guide.title": "使用说明",
     "guide.startTitle": "开始监测",
@@ -234,6 +245,8 @@ const TRANSLATIONS = {
     "button.reset": "Reset",
     "follow.live": "Live Follow",
     "follow.review": "Review Mode",
+    "follow.enterReview": "Review",
+    "follow.returnLive": "Back Live",
     "chart.realtimeTitle": "Realtime Waveform",
     "chart.realtimeSubtitle": "Process patient respiratory signals in realtime, observe rhythm, record segments, and mark scan ranges",
     "field.smoothing": "Smoothing",
@@ -249,8 +262,8 @@ const TRANSLATIONS = {
     "legend.valley": "Valley",
     "legend.recorded": "Recorded range",
     "legend.scan": "Scan range",
-    "statusPanel.status": "Status",
-    "statusPanel.statusHint": "Status updates automatically once data is flowing",
+    "statusPanel.status": "Data Status",
+    "statusPanel.statusHint": "",
     "statusPanel.stability": "Stability",
     "statusPanel.intervalCv": "Interval CV",
     "statusPanel.rawPoints": "Raw Points",
@@ -260,6 +273,15 @@ const TRANSLATIONS = {
     "details.recordFileHint": "save or load a recorded segment",
     "details.lastUpdate": "Last Update",
     "record.title": "Recorded Segment",
+    "record.details": "Details",
+    "record.detailsTitle": "Record Details",
+    "record.close": "Close",
+    "record.detail.status": "Status",
+    "record.detail.duration": "Duration",
+    "record.detail.index": "Index",
+    "record.detail.scan": "Scan",
+    "record.detail.time": "Time",
+    "record.detail.points": "Points",
     "guide.kicker": "Guide",
     "guide.title": "How to use",
     "guide.startTitle": "Start Monitoring",
@@ -421,6 +443,15 @@ const dom = {
   recordScanRange: document.querySelector("#recordScanRange"),
   recordTimeRange: document.querySelector("#recordTimeRange"),
   recordPointCount: document.querySelector("#recordPointCount"),
+  recordDetailBtn: document.querySelector("#recordDetailBtn"),
+  recordDetailDialog: document.querySelector("#recordDetailDialog"),
+  recordDetailCloseBtn: document.querySelector("#recordDetailCloseBtn"),
+  recordDetailStatus: document.querySelector("#recordDetailStatus"),
+  recordDetailDuration: document.querySelector("#recordDetailDuration"),
+  recordDetailIndexRange: document.querySelector("#recordDetailIndexRange"),
+  recordDetailScanRange: document.querySelector("#recordDetailScanRange"),
+  recordDetailTimeRange: document.querySelector("#recordDetailTimeRange"),
+  recordDetailPointCount: document.querySelector("#recordDetailPointCount"),
   waveChart: document.querySelector("#waveChart"),
   recordChart: document.querySelector("#recordChart"),
 };
@@ -679,6 +710,11 @@ function translatePage(nextLanguage = language) {
   }
 
   dom.pauseBtn.textContent = state.paused ? t("button.resumeView") : t("button.pauseView");
+  if (dom.recordDetailCloseBtn) {
+    const closeText = t("record.close");
+    dom.recordDetailCloseBtn.setAttribute("aria-label", closeText);
+    dom.recordDetailCloseBtn.setAttribute("title", closeText);
+  }
   recordApi.refreshLanguage?.();
   statusApi.updateStats();
   chartApi.updateFollowButton();
@@ -725,13 +761,27 @@ dom.loadRecordBtn.addEventListener("click", () => {
 dom.loadRecordInput.addEventListener("change", (event) => {
   recordApi.loadRecordFile(event.target.files?.[0]);
 });
+dom.recordDetailBtn?.addEventListener("click", () => {
+  if (typeof dom.recordDetailDialog?.showModal === "function") {
+    dom.recordDetailDialog.showModal();
+  }
+});
+dom.recordDetailCloseBtn?.addEventListener("click", () => {
+  dom.recordDetailDialog?.close();
+});
+dom.recordDetailDialog?.addEventListener("click", (event) => {
+  if (event.target === dom.recordDetailDialog) {
+    dom.recordDetailDialog.close();
+  }
+});
 dom.pauseBtn.addEventListener("click", togglePause);
 dom.resetBtn.addEventListener("click", () => resetData({ syncBackend: true }));
 dom.followBtn.addEventListener("click", () => {
-  state.followLive = true;
-  state.pendingReviewRange = null;
-  chartApi.updateFollowButton();
-  chartApi.scheduleRender(true);
+  if (state.followLive) {
+    chartApi.enterReviewMode();
+    return;
+  }
+  chartApi.exitReviewMode();
 });
 dom.smoothingSelect.addEventListener("change", (event) => {
   state.smoothingMode = event.target.value;

@@ -26,6 +26,7 @@ export function createSocketModule(ctx) {
 
   async function startMonitoring() {
     if (state.running) {
+      dom.startBtn.disabled = true;
       setConnectionStatus(state.hasReceivedData ? "connection.receiving" : "connection.waiting");
       recordApi.updateRecordButtons();
       chartApi.updateFollowButton();
@@ -40,6 +41,7 @@ export function createSocketModule(ctx) {
     connectSocket();
     state.filterConfig = buildFilterConfig();
     setConnectionStatus("connection.waiting");
+    dom.startBtn.disabled = true;
 
     let response;
     try {
@@ -49,9 +51,11 @@ export function createSocketModule(ctx) {
         body: JSON.stringify(state.filterConfig),
       });
     } catch (error) {
+      dom.startBtn.disabled = false;
       throw startError("connection.startBackendUnreachable");
     }
     if (!response.ok) {
+      dom.startBtn.disabled = false;
       throw startError("connection.startHttp", { status: response.status });
     }
 
@@ -90,12 +94,14 @@ export function createSocketModule(ctx) {
       state.socket.on("disconnect", () => {
         setConnectionStatus("connection.disconnected");
         state.running = false;
+        dom.startBtn.disabled = false;
         recordApi.updateRecordButtons();
       });
 
       state.socket.on("connect_error", () => {
         setConnectionStatus("connection.error");
         state.running = false;
+        dom.startBtn.disabled = false;
         recordApi.updateRecordButtons();
       });
 

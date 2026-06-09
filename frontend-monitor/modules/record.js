@@ -50,6 +50,19 @@ export function createRecordModule(ctx) {
     dom.recordStatus.dataset.statusKey = key;
     dom.recordStatus.textContent = t(key);
     dom.recordStatus.dataset.status = status.toLowerCase().replace(/\s+/g, "-");
+    syncRecordDetailSummary();
+  }
+
+  function syncRecordDetailSummary() {
+    if (!dom.recordDetailStatus) {
+      return;
+    }
+    dom.recordDetailStatus.textContent = dom.recordStatus.textContent;
+    dom.recordDetailDuration.textContent = dom.recordDuration.textContent;
+    dom.recordDetailIndexRange.textContent = dom.recordIndexRange.textContent;
+    dom.recordDetailScanRange.textContent = dom.recordScanRange.textContent;
+    dom.recordDetailTimeRange.textContent = dom.recordTimeRange.textContent;
+    dom.recordDetailPointCount.textContent = dom.recordPointCount.textContent;
   }
 
   function appendUniquePoints(target, batch) {
@@ -408,7 +421,8 @@ export function createRecordModule(ctx) {
     };
     const record = state.activeRecord;
     state.recording = true;
-    setRecordSectionVisible(true);
+    state.lastRecord = null;
+    setRecordSectionVisible(false);
     updateRecordButtons();
     updateRecordSummary(state.activeRecord);
     chartApi.scheduleRender(true);
@@ -525,11 +539,15 @@ export function createRecordModule(ctx) {
     record.postCapturing = RECORD_POST_POINTS > 0;
     record.awaitingBackendEnd = true;
     closeActiveScan(record, record.endSeq, true);
+    hydrateRecordFromState(record);
+    state.lastRecord = record;
+    setRecordSectionVisible(true);
 
     updateRecordButtons();
     updateRecordSummary(record);
     setRecordStatus(record.postCapturing ? "Post Capture" : "Filtering");
     chartApi.scheduleRender(true);
+    chartApi.renderRecord();
 
     try {
       const response = await apiFetch("/record/end", { method: "POST" });
@@ -578,6 +596,7 @@ export function createRecordModule(ctx) {
     state.lastRecord = record;
     state.activeRecord = null;
     state.recording = false;
+    setRecordSectionVisible(true);
     updateRecordButtons();
     updateRecordSummary(record);
     setRecordStatus("Filtering");
@@ -853,6 +872,7 @@ export function createRecordModule(ctx) {
       dom.recordScanRange.textContent = t("record.scans.empty");
       dom.recordTimeRange.textContent = t("record.time.empty");
       dom.recordPointCount.textContent = t("record.points", { count: 0 });
+      syncRecordDetailSummary();
       return;
     }
 
@@ -869,6 +889,7 @@ export function createRecordModule(ctx) {
       preCount > 0 || postCount > 0
         ? t("record.pointsWithPadding", { count: pointCount, pre: preCount, post: postCount })
         : t("record.points", { count: pointCount });
+    syncRecordDetailSummary();
     if (state.recording) {
       setRecordStatus(record.postCapturing ? "Post Capture" : "Recording");
     }

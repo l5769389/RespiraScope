@@ -2,12 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client";
 import {
   Activity,
-  AlertTriangle,
   FlaskConical,
-  Play,
   Server,
   ShieldCheck,
-  SlidersHorizontal,
   Wifi,
 } from "lucide-react";
 
@@ -31,6 +28,16 @@ const TEXT = {
     session: "会话",
     sessionIsolated: "本标签页独立",
     offlineHint: "后端暂不可达，请确认启动窗口中的 Backend API 地址和服务状态。",
+    guideKicker: "Workflow",
+    guideTitle: "使用说明",
+    guideStartTitle: "开始监测",
+    guideStartText: "连接后端并接收实时呼吸波形，观察滤波、峰谷识别和 BPM 估计。",
+    guideRecordStartTitle: "开始记录",
+    guideRecordStartText: "从当前时刻截取一段采集片段，实时图中会高亮记录区间。",
+    guideScanTitle: "扫描标记",
+    guideScanText: "在记录过程中标记扫描或重点时间段，便于之后回看定位。",
+    guideRecordEndTitle: "结束记录",
+    guideRecordEndText: "停止片段采集并展示记录波形，包含前后缓冲和离线复算结果。",
     heroKicker: "Algorithm Workflow",
     heroTitle: "从呼吸波形到 4D 采集可用的节律信息",
     heroText: "系统完成实时信号接收、滤波降噪、峰谷识别、BPM 估计、记录片段、扫描标记和离线复算，帮助快速判断呼吸采集过程是否稳定、是否可回看。",
@@ -61,6 +68,16 @@ const TEXT = {
     session: "Session",
     sessionIsolated: "This tab only",
     offlineHint: "Backend is unreachable. Check the Backend API address and service status in the startup window.",
+    guideKicker: "Workflow",
+    guideTitle: "Usage",
+    guideStartTitle: "Start Monitoring",
+    guideStartText: "Connect to the backend and receive realtime breath waveforms with filtering, peak/valley detection, and BPM.",
+    guideRecordStartTitle: "Start Record",
+    guideRecordStartText: "Capture a segment from the current moment; the realtime chart highlights the recorded range.",
+    guideScanTitle: "Scan Marker",
+    guideScanText: "Mark scan or review ranges while recording so they can be located later.",
+    guideRecordEndTitle: "End Record",
+    guideRecordEndText: "Stop segment capture and show the recorded waveform with pre/post buffer and offline recalculation.",
     heroKicker: "Algorithm Workflow",
     heroTitle: "From breath waveform to 4D acquisition-ready rhythm data",
     heroText: "The system handles realtime signal intake, denoising, peak and valley detection, BPM estimation, segment recording, scan markers, and offline recalculation so the acquisition process can be reviewed.",
@@ -130,8 +147,9 @@ function apiFetch(path, options) {
 }
 
 function StatusPill({ icon: Icon, label, value, tone }) {
+  const text = `${label}: ${value}`;
   return (
-    <div className={`status-pill ${tone}`}>
+    <div className={`status-pill ${tone}`} aria-label={text} title={text} tabIndex={0}>
       <Icon aria-hidden="true" size={17} strokeWidth={2.4} />
       <span>{label}</span>
       <strong>{value}</strong>
@@ -149,6 +167,12 @@ function App() {
   const labFrameRef = useRef(null);
   const t = useCallback((key) => TEXT[language]?.[key] ?? TEXT.en[key] ?? key, [language]);
   const modes = useMemo(availableModes, []);
+  const guideSteps = useMemo(() => [
+    { title: t("guideStartTitle"), text: t("guideStartText") },
+    { title: t("guideRecordStartTitle"), text: t("guideRecordStartText") },
+    { title: t("guideScanTitle"), text: t("guideScanText") },
+    { title: t("guideRecordEndTitle"), text: t("guideRecordEndText") },
+  ], [t]);
 
   const activateMode = useCallback((nextMode, options = {}) => {
     const normalized = normalizeMode(nextMode);
@@ -215,22 +239,6 @@ function App() {
       setMockEnabled(Boolean(runtimeConfig.mockSignalEnabled));
     }
   }, []);
-
-  const startMockDemo = useCallback(async () => {
-    await activateMode("monitor");
-    if (runtimeConfig.mockSignalEnabled !== false) {
-      try {
-        await apiFetch("/mock/config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scenario: "normal" }),
-        });
-      } catch {
-        // The monitor can still start with the current mock config.
-      }
-    }
-    window.setTimeout(() => postToFrame("monitor", { type: "RespiraScope-start-demo" }), 80);
-  }, [activateMode, postToFrame]);
 
   const updateLanguage = useCallback((nextLanguage) => {
     setLanguage(nextLanguage);
@@ -337,34 +345,6 @@ function App() {
         </div>
       </header>
 
-      <section className="experience-panel" aria-label="RespiraScope overview">
-        <div className="experience-copy">
-          <span className="eyebrow">{t("heroKicker")}</span>
-          <h2>{t("heroTitle")}</h2>
-          <p>{t("heroText")}</p>
-          {backendState === "offline" && (
-            <div className="inline-alert" role="status">
-              <AlertTriangle aria-hidden="true" size={17} strokeWidth={2.5} />
-              <span>{t("offlineHint")}</span>
-            </div>
-          )}
-        </div>
-        <div className="quick-actions">
-          <button type="button" onClick={startMockDemo}>
-            <Play aria-hidden="true" size={17} strokeWidth={2.5} />
-            {t("startDemo")}
-          </button>
-          <button className="secondary" type="button" onClick={() => activateMode("monitor")}>
-            <Activity aria-hidden="true" size={17} strokeWidth={2.4} />
-            {t("openMonitor")}
-          </button>
-          <button className="secondary" type="button" onClick={() => activateMode("lab")}>
-            <SlidersHorizontal aria-hidden="true" size={17} strokeWidth={2.4} />
-            {t("openLab")}
-          </button>
-        </div>
-      </section>
-
       {noFrontend ? (
         <section className="disabled-panel">
           <h2>{t("disabledTitle")}</h2>
@@ -373,28 +353,47 @@ function App() {
       ) : (
         <section className="console-workspace">
           <nav className="mode-rail" aria-label="RespiraScope modes">
-            {modes.monitor && (
-              <button
-                className={`mode-button ${activeMode === "monitor" ? "active" : ""}`}
-                type="button"
-                onClick={() => activateMode("monitor")}
-              >
-                <Activity aria-hidden="true" size={19} strokeWidth={2.5} />
-                <span>{t("monitor")}</span>
-                <small>{t("monitorText")}</small>
-              </button>
-            )}
-            {modes.lab && (
-              <button
-                className={`mode-button ${activeMode === "lab" ? "active" : ""}`}
-                type="button"
-                onClick={() => activateMode("lab")}
-              >
-                <FlaskConical aria-hidden="true" size={19} strokeWidth={2.5} />
-                <span>{t("lab")}</span>
-                <small>{t("labText")}</small>
-              </button>
-            )}
+            <div className="mode-list">
+              {modes.monitor && (
+                <button
+                  className={`mode-button ${activeMode === "monitor" ? "active" : ""}`}
+                  type="button"
+                  aria-label={`${t("monitor")}: ${t("monitorText")}`}
+                  title={`${t("monitor")}: ${t("monitorText")}`}
+                  onClick={() => activateMode("monitor")}
+                >
+                  <Activity aria-hidden="true" size={19} strokeWidth={2.5} />
+                  <span>{t("monitor")}</span>
+                  <small>{t("monitorText")}</small>
+                </button>
+              )}
+              {modes.lab && (
+                <button
+                  className={`mode-button ${activeMode === "lab" ? "active" : ""}`}
+                  type="button"
+                  aria-label={`${t("lab")}: ${t("labText")}`}
+                  title={`${t("lab")}: ${t("labText")}`}
+                  onClick={() => activateMode("lab")}
+                >
+                  <FlaskConical aria-hidden="true" size={19} strokeWidth={2.5} />
+                  <span>{t("lab")}</span>
+                  <small>{t("labText")}</small>
+                </button>
+              )}
+            </div>
+
+            <section className="rail-guide" aria-label={t("guideTitle")}>
+              <span className="eyebrow">{t("guideKicker")}</span>
+              <h2>{t("guideTitle")}</h2>
+              <div className="rail-guide-list">
+                {guideSteps.map((step) => (
+                  <article className="rail-guide-item" key={step.title}>
+                    <strong>{step.title}</strong>
+                    <span>{step.text}</span>
+                  </article>
+                ))}
+              </div>
+            </section>
           </nav>
 
           <div className="frame-stage">
