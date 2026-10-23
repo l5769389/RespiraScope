@@ -15,7 +15,7 @@ echo [RespiraScope] Starting from %CD%
 echo [RespiraScope] Press Ctrl+C to stop the server.
 echo.
 
-uv run RespiraScope
+uv run respirascope %*
 set "exit_code=%ERRORLEVEL%"
 
 echo.

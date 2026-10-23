@@ -28,8 +28,8 @@ enabled = true
 enabled = true
 
 [record]
-pre_points = 100
-post_points = 100
+pre_points = 1000
+post_points = 1000
 storage_root = "/ct/breath-records"
 
 [session]

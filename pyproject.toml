@@ -33,7 +33,12 @@ dev = [
     "pytest>=8.4.0,<9.0.0",
 ]
 
+ui-test = [
+    "playwright>=1.55,<2",
+]
+
 [project.scripts]
+respirascope = "ct_breath.main:main"
 RespiraScope = "ct_breath.main:main"
 
 [tool.uv]
@@ -46,7 +51,8 @@ module-name = "ct_breath"
 pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-norecursedirs = [".venv", "dist", "build", "frontend-lab", "frontend-monitor"]
+# Browser tests are opt-in with an explicit `pytest tests/ui` target.
+norecursedirs = [".venv", "dist", "build", "tests/ui"]
 
 [[tool.uv.index]]
 name = "tuna"
@@ -54,5 +60,5 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
 
 [build-system]
-requires = ["uv_build>=0.10.11,<0.11.0"]
+requires = ["uv_build>=0.11.0,<0.12.0"]
 build-backend = "uv_build"

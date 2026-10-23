@@ -32,7 +32,7 @@ flowchart LR
 | `ct_breath.config` | 读取外部 TOML 配置，不依赖环境变量 |
 | `ct_breath.app` | 创建 FastAPI 与 Socket.IO 应用 |
 | `ct_breath.main` | 本地和 exe 启动入口，启动后端与静态 Web Console |
-| `ct_breath.frontend_static` | 启动和注入静态前端运行配置，服务 React Console 构建产物 |
+| `ct_breath.frontend_static` | 启动和注入静态前端运行配置，服务 Python 包内的原生 Console 静态源码 |
 | `breath_process.data_receive` | 从 TCP 传感器读取原始采样值 |
 | `breath_process.signal_processor` | 执行实时滑动窗口滤波 |
 | `breath_process.filter_strategies` | 区分实时滤波和离线滤波策略 |
@@ -63,7 +63,7 @@ flowchart TB
 http://localhost:5175
 ```
 
-Console 壳层使用 React/Vite 构建，构建结果仍是普通静态资源。Console 中包含两个主要体验模式：
+Console 壳层使用原生 HTML/CSS/JavaScript，资源存放于 `src/ct_breath/web/` 并随 Python 包分发，无需 Node/npm 构建。Console 中包含两个主要体验模式：
 
 - 实时体验：面向用户显示呼吸数据、滤波结果、BPM、记录和扫描标记。
 - 模拟实验：面向公网演示和调试模拟呼吸状态、波形预览和滤波效果。
@@ -76,6 +76,7 @@ Console 壳层使用 React/Vite 构建，构建结果仍是普通静态资源。
 
 ```text
 Windows: D:/ct/breath-config/breath.toml
+macOS:   ~/Library/Application Support/RespiraScope/config/breath.toml
 Linux:   /ct/breath-config/breath.toml
 ```
 

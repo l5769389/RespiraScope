@@ -407,8 +407,8 @@ BPM 和呼吸稳定性指标。
       }
     },
     "record": {
-      "pre_points": 100,
-      "post_points": 100,
+      "pre_points": 1000,
+      "post_points": 1000,
       "recording": false,
       "post_recording": false,
       "record_complete": false,
@@ -466,7 +466,6 @@ BPM 和呼吸稳定性指标。
   "high_bpm": 40,
   "order": 1,
   "sampling_rate": 50,
-  "moving_avg_window": 3,
   "gaussian_sigma": 1,
   "min_peak_distance": 15,
   "peak_threshold_ratio": 0.3,
@@ -495,7 +494,6 @@ BPM 和呼吸稳定性指标。
       "highpass_cutoff": 0.6666666666666666,
       "order": 1,
       "sampling_rate": 50,
-      "moving_avg_window": 3,
       "gaussian_sigma": 1,
       "min_peak_distance": 15,
       "peak_threshold_ratio": 0.3,
@@ -519,7 +517,7 @@ BPM 和呼吸稳定性指标。
 
 说明：
 
-- `lowpass_cutoff` 和 `highpass_cutoff` 会由 `low_bpm`、`high_bpm` 换算并规范化。
+- `bandpass_mode` 默认为 `preset`：时间模式由 `low_bpm`、`high_bpm` 换算截止频率，幅值模式使用 0.03–2 Hz；设为 `custom` 时保留传入的 Hz 上下限。
 - 外部系统通常只需要配置 BPM、采样率、平滑窗口、峰谷参数。
 - `data.stream` 完整结构同 `GET /stream/status` 的 `data`。
 
@@ -595,7 +593,6 @@ BPM 和呼吸稳定性指标。
     "low_bpm": 6,
     "high_bpm": 40,
     "sampling_rate": 50,
-    "moving_avg_window": 3,
     "gaussian_sigma": 1,
     "min_peak_distance": 15,
     "peak_threshold_ratio": 0.3,
@@ -667,8 +664,8 @@ BPM 和呼吸稳定性指标。
   "message": "Record started",
   "data": {
     "record": {
-      "pre_points": 100,
-      "post_points": 100,
+      "pre_points": 1000,
+      "post_points": 1000,
       "recording": true,
       "post_recording": false,
       "record_complete": false,
@@ -811,7 +808,7 @@ BPM 和呼吸稳定性指标。
 - 如果有活动 scan，会自动关闭该 scan，`auto_closed` 为 `true`。
 - 后端会等待 end 后辅助点采集完成，最长等待约 10 秒。
 - 离线滤波会使用包含 `pre`、`record`、`post` 的原始数据上下文。
-- 返回体保持精简，不返回 `scan_indexes`、`filter_config`、`capture_start_sequence`、`capture_end_sequence`。
+- 返回体保持精简，不返回 `scan_indexes`、`capture_start_sequence`、`capture_end_sequence`；`filter_config` 返回实际滤波参数，防止前端回填为默认值。
 
 请求体：无。
 
@@ -888,8 +885,8 @@ BPM 和呼吸稳定性指标。
     "duration_seconds": 48.0
   },
   "record_padding": {
-    "pre_points": 100,
-    "post_points": 100
+    "pre_points": 1000,
+    "post_points": 1000
   }
 }
 ```
@@ -1083,17 +1080,20 @@ BPM 和呼吸稳定性指标。
 
 ### 5.1 `FilterConfig`
 
-`POST /startReceive`、`POST /setRTFilterParams`、`POST /applyFilter` 都会使用该配置。
+`POST /startReceive`、`POST /setRTFilterParams`、`POST /applyFilter`、`POST /detectPeaks` 都会使用该配置。有效截止频率须满足 0 < 下限 < 上限 < 采样率 / 2；自定义上下限各为 0.01–20 Hz。非法配置返回 HTTP 422。
 
 | 字段 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `low_bpm` | number | `6` | 低呼吸频率边界，后端会换算成滤波截止频率 |
 | `high_bpm` | number | `40` | 高呼吸频率边界，后端会换算成滤波截止频率 |
-| `lowpass_cutoff` | number | `0.1` | 由 `low_bpm / 60` 规范化；外部系统通常无需直接传 |
-| `highpass_cutoff` | number | `0.6667` | 由 `high_bpm / 60` 规范化；外部系统通常无需直接传 |
+| `processing_mode` | string | `time` | `time` 或 `amplitude` |
+| `offline_filter` | string | `bandpass` | 原带通；`baseline_lowpass` 为保留基线低通，仅用于离线接口，实时接口返回 422 |
+| `lowpass_order` | integer | `4` | 保留基线低通阶数，范围 1–5；不改变原带通 `order` |
+| `bandpass_mode` | string | `preset` | `preset` 使用方式预设；`custom` 保留传入的截止频率 |
+| `lowpass_cutoff` | number | `0.1` | 带通下限（Hz）；自定义时直接生效 |
+| `highpass_cutoff` | number | `0.6667` | 带通上限或低通截止频率（Hz）；低通 preset 为 2 Hz，自定义时直接生效 |
 | `order` | number | `1` | 滤波阶数 |
 | `sampling_rate` | number | `50` | 采样率，影响 BPM 和峰谷间隔计算 |
-| `moving_avg_window` | number | `3` | 移动平均窗口 |
 | `gaussian_sigma` | number | `1` | 高斯平滑强度 |
 | `min_peak_distance` | number | `15` | 峰谷之间的最小采样点距离 |
 | `peak_threshold_ratio` | number | `0.3` | 自适应峰谷显著性比例 |
@@ -1104,6 +1104,8 @@ BPM 和呼吸稳定性指标。
 | `data_gap_reset_points` | number | `25` | `sequence` 断开超过该点数时重置实时识别上下文 |
 | `gap_warmup_points` | number | `75` | 断流恢复后等待多少点再输出峰谷 |
 | `restore_baseline` | boolean | `true` | 滤波后是否恢复到原始基线附近 |
+
+`baseline_lowpass` 不使用带通下限，也不执行带通基线偏置恢复；`restore_baseline` 返回 true，`processingQuality.baselines[].status` 返回 `preserved`（offset=0，cycles=0）。它保留输入的慢变化，包括可能的设备漂移。自定义低通只要求 0.01 Hz ≤ 上限 ≤ 20 Hz 且小于采样率的一半；下限字段保留用于切换回带通，但不约束低通上限。低通自适应峰谷阈值基于局部突出度，返回的峰谷值仍取自实际低通曲线。缺失 `offline_filter` 的旧文件和旧请求保持带通语义。分箱质量排除不因低通而取消。
 
 ### 5.2 `record` 状态
 
@@ -1126,100 +1128,43 @@ BPM 和呼吸稳定性指标。
 
 ### 5.3 `/record/end` 与保存文件的差异
 
-`POST /record/end` 返回给外部系统的是精简结果，便于前端直接展示和业务系统直接消费。
+`POST /record/end` 默认保持既有接口结构。新版页面发送 `Accept: application/vnd.respirascope.record.v5+json`，响应为 `{code,status,message,data}`，其中 `data` 直接使用下表右列的 JSON v5 结构，且 `Content-Type` 为该媒体类型；响应带 `Vary: Accept`。显式指定新媒体类型且其质量权重不低于 JSON 时才返回新格式；`q=0` 不会选择新格式。旧后端忽略此请求头时，页面继续兼容旧返回格式。`POST /record/save` 保存到磁盘的文件与界面下载均使用 JSON v5 精简格式；导入兼容旧版文件。
 
-| 字段 | `/record/end` 返回 | 保存文件返回 |
+| 内容 | `/record/end` 返回 | v5 保存文件 |
 | --- | --- | --- |
-| `data` / `filtered_data` | `data`，离线滤波点 | `filtered_data` |
-| `raw_data` | 有 | 有 |
-| `peak` / `valley` | 有 | 有 |
-| `metrics` | 有 | 有 |
-| `segments` | 有，包含 `auxiliary` | 有，包含 `auxiliary` |
-| `scans` | 有 | 有 |
-| `scan_indexes` | 不返回 | 每个点会保存 |
-| `filter_config` / `filter_params` | 不返回 | 保存为 `filter_params` |
-| `capture_start_sequence` / `capture_end_sequence` | 不返回 | 保存 |
+| 原始、滤波点 | `raw_data` / `data` | `raw` / `filtered`，`[序号, 幅值, 可选原有时间戳]` |
+| 峰谷 | `peak` / `valley` | `peaks` / `valleys`，`{sequence,value}`，仅超界附加 `amplitudeRange` |
+| 记录范围 | `record_start_sequence` / `record_end_sequence` | `startSeq` / `endSeq` |
+| 记录时间 | `record_time` | `startTime` / `endTime`，ISO 8601 |
+| 扫描范围 | `scans`，snake_case 字段 | `scans`，`index/startSeq/endSeq/startTime/endTime`；仅自动结束时添加 `autoClosed: true` |
+| 滤波参数和状态 | `filter_config` / `filter_status` | `filterConfig` / `filterStatus`；两种分箱共用一份参数 |
+| 分箱 | 接口提供的分析结果 | `analysis` 保存方式、上下限与 `totalBins`，`respiratoryBins` 保存实际分箱区间，每方向 N = totalBins / 2 箱 |
+| 离线质量 | `processingQuality` | 原样保留无效区间、基线估计状态与偏移量；旧文件可缺省 |
+| 摘要和逐点标签 | `metrics`、`segments` 等 | 不保存，通过序号和记录/扫描范围推算 |
 
-保存文件示例：
+`raw` 和 `filtered` 包含前后缓冲点，`startSeq` 至 `endSeq`（含端点）才是用户真实记录范围。分箱区间使用 `[start,end)`，只覆盖真实记录范围。固定幅值分箱的边界为 `lower + i * (upper - lower) / N`（`i=0..N`，`N=totalBins/2`），未到达的箱不写区间。文件只保留一份波形、一份时间、一份区间，不再保存别名和重复分组。
+
+原有时间戳保留；缺失的点时间戳不补造。固定幅值峰谷高于上限时附加 `amplitudeRange: "above"`，低于下限时为 `"below"`；界内或非固定幅值不添加此字段。
+
+旧文件中的模式差异配置不再用于切换；新文件仅保留当前公共 `filterConfig`。更完整的字段说明见 [README 数据记录](../README.md#数据记录)。
+
+`/applyFilter`、`/record/end` 和新保存的离线记录提供以下可选扩展，仍兼容 v5：
 
 ```json
 {
-  "version": 2,
-  "record_time": {
-    "start_time": "2026-05-25T10:30:02.000000+00:00",
-    "end_time": "2026-05-25T10:30:50.000000+00:00",
-    "duration_seconds": 48.0
-  },
-  "record_start_sequence": 6608,
-  "record_end_sequence": 8091,
-  "capture_start_sequence": 6508,
-  "capture_end_sequence": 8191,
-  "segments": {
-    "pre": {
-      "start_sequence": 6508,
-      "end_sequence": 6607,
-      "auxiliary": true
-    },
-    "record": {
-      "start_sequence": 6608,
-      "end_sequence": 8091,
-      "auxiliary": false
-    },
-    "post": {
-      "start_sequence": 8092,
-      "end_sequence": 8191,
-      "auxiliary": true
-    }
-  },
-  "scans": [
-    {
-      "index": 1,
-      "start_time": "2026-05-25T10:30:10.000000+00:00",
-      "end_time": "2026-05-25T10:30:35.000000+00:00",
-      "start_sequence": 6700,
-      "end_sequence": 7320,
-      "auto_closed": false
-    }
-  ],
-  "raw_data": [
-    {
-      "sequence": 6608,
-      "value": 212.1,
-      "timestamp": "2026-05-25T10:30:02.000000+00:00",
-      "segment": "record",
-      "scan_indexes": []
-    }
-  ],
-  "filtered_data": [
-    {
-      "sequence": 6608,
-      "value": 205.9,
-      "timestamp": "2026-05-25T10:30:02.000000+00:00",
-      "segment": "record",
-      "scan_indexes": []
-    }
-  ],
-  "filter_params": {},
-  "filter_status": "live",
-  "peak": [
-    {
-      "sequence": 6720,
-      "value": 246.1,
-      "segment": "record",
-      "scan_indexes": [1]
-    }
-  ],
-  "valley": [
-    {
-      "sequence": 6802,
-      "value": 96.4,
-      "segment": "record",
-      "scan_indexes": [1]
-    }
-  ],
-  "metrics": {}
+  "processingQuality": {
+    "version": 2,
+    "invalidIntervals": [{"start": 4500, "end": 4503, "reason": "spike"}],
+    "baselines": [{"start": 0, "end": 9000, "status": "estimated", "cycles": 36, "offset": 180.1}]
+  }
 }
 ```
+
+区间以原始采样序号表示，使用 `[start,end)`，覆盖完整输入（包括缓冲）；重叠区间取并集。`reason` 可为 `spike`（插值尖峰）、`motion`（持续伪影/跳变）、`filter_edge`（滤波影响边缘）、`gap`（缺失数据）、`too_short`（片段不足）。这些区间及跨过它们的半周期不能参与分箱；质量元数据 v2 的 `motion`、`too_short` 结果是同一连续采集段计算的滤波参考值，界面以虚线显示，不参与峰谷、边界估计或分箱。参考处理使用相同带通与平滑参数、同一段基线偏移，不跨数据缺口。已局部界定且不超过 1 秒的短暂伪影在工作副本中桥接后连续滤波，避免把正常呼吸切成过短片段；参考值仍按未桥接输入计算，伪影及局部滤波影响区间均不参与分箱。持续偏移、长体动及缺口仍分段处理。v1 在这些区间保存的是原始占位值，导入后仍隐藏，重新计算才生成 v2 参考值。原始数据不被插值覆盖。
+
+`baselines` 每项对应一个无数据缺口的采集段。`status` 为 `estimated` / `insufficient_cycles` / `disabled`；`cycles` 是用于评估基线的周期数，`offset` 是实际加回的常量（禁用时省略）。`insufficient_cycles` 使用中位数回退，不表示基线已经可靠校正。
+
+只重判峰谷时，调用 `/detectPeaks` 需将上述 `invalidIntervals` 原样放入请求的 `invalid_intervals` 字段。省略该字段兼容旧调用；新页面会自动传递，以免把伪影重新识别为峰谷。反向、负值或非有限区间会被拒绝。导入时保留质量信息，缺省代表旧文件；存在但格式非法时拒绝导入，不静默丢弃掩码。
 
 ### 5.4 区间字段
 
@@ -1323,3 +1268,26 @@ curl -X POST http://127.0.0.1:8000/record/save \
 ```
 
 带 session 时，示例中的 `folder_path` 会被忽略，记录保存到服务端配置的 session 临时目录。
+
+### 离线峰谷重识别 `POST /detectPeaks`
+
+请求体为 `{ "filter_config": { "peak_threshold_ratio": 0.15, "auto_peak_detection": true }, "filtered_data": [[sequence, value], ...] }`。使用已有滤波数据重新识别峰谷，返回标准成功结构及顶层 `peak`、`valley`、`metrics`。不再滤波、不返回替换曲线，也不修改实时处理器。数据格式为严格的二元数值点对；缺口按 `data_gap_reset_points` 分段识别。
+
+离线界面的保守、标准、灵敏分别对应比例 0.45、0.30、0.15。保存文件的 `filterConfig` 记录已应用设置；切换时间／幅值只重新计算分箱，沿用当前滤波参数和结果，不恢复另一套参数。
+
+### 接口数据校验与传输
+
+`/applyFilter.raw_data` 和 `/detectPeaks.filtered_data` 均为二元数值点对 `[sequence,value]`：序号是非负整数，必须严格递增，允许缺口，不允许重复或倒序；幅值必须是有限数值。空输入合法；数据过短时 `/applyFilter.data` 返回空数组，避免数组和对象混用。
+
+校验失败返回 HTTP 422，`detail` 数组只保留 `loc`、`msg`、`type`，不回传整段输入波形或无法用 JSON 表示的数值。页面显示字段路径及原因，保留已提交结果和待应用设置。
+
+支持 gzip 的客户端可通过 `Accept-Encoding: gzip` 协商压缩，大于 1024 字节的 HTTP 响应启用压缩；Socket.IO 数据协议不变。新版紧凑记录只保存一次波形与分箱，保留已有时间戳和实际滤波参数；统计摘要及逐点区间标签可由范围信息推导。
+
+`analysis.totalBins` 可选 4、6、8、10、12、16、20，默认 10；吸气和呼气各占一半。保存接口对其他数量返回 422，旧文件缺少该字段时按 10 箱导入。
+
+
+记录缓冲：`/runtime/config` 的 `record.filter_padding.time` / `.amplitude` 返回各模式的 `pre_points`、`post_points`；前端运行配置对应 `record.filterPadding` 的驼峰字段。默认时间模式各 250 点、幅值模式各 1000 点。`record.pre_points` / `post_points` 仍为采集容量，取两种模式分别的最大值。配置修改后重启生效，不按滤波参数自动扩大；已有数据不足时使用实际部分。
+
+`POST /applyFilter` 可额外提供 `record_start_sequence`、`record_end_sequence`（闭区间，非负整数，必须同时提供，起点不大于终点）。提供时按当前模式配置从 `raw_data` 中取对应缓冲范围；省略时仍处理完整输入，保持预览和旧调用兼容。记录页面切换/重新滤波发送这两个字段；原始数据保留完整采集上下文，返回滤波数据仅包含本次实际使用范围。`POST /record/end` 与 `/record/save` 使用相同的模式缓冲规则。
+
+`/record/end` 收满后缓冲后返回，等待上限为剩余采样时长加 8 秒，请调用方相应设置 HTTP 超时；数据不足时使用已收到的部分。记录范围不包含前后缓冲。

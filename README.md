@@ -77,8 +77,8 @@ flowchart LR
 | 实时处理 | `DataReceiver` 接收原始点，`SignalProcessor` 实时滤波，`PeakValleyDetector` 识别峰谷并计算 BPM |
 | 数据推送 | 后端通过 Socket.IO `/breath` 命名空间广播 raw、filtered、peak、valley、metrics |
 | 记录复算 | Record 结束后可使用离线滤波重新处理记录区间，获得更平滑的复盘结果 |
-| Web Console | React 壳层组织实时体验和模拟实验，构建后仍作为静态资源由 Python 服务 |
-| 外部配置 | 不依赖 `.env`，从 `D:/ct/breath-config/breath.toml` 或 `/ct/breath-config/breath.toml` 读取部署配置 |
+| Web Console | 原生 HTML/CSS/JavaScript 组织实时体验和模拟实验，随 Python 服务一起启动，无需前端构建 |
+| 外部配置 | 不依赖 `.env`，从 Windows、macOS 或 Linux 的外部配置路径读取部署配置 |
 
 ## 文件结构
 
@@ -86,18 +86,19 @@ flowchart LR
 .
 |-- config/                  # 示例配置
 |-- docs/                    # 算法、接口、架构和开源说明
-|-- frontend-api-docs/       # 开发者接口说明页面（不再作为 Console 主入口）
-|-- frontend-console/        # 统一 Web Console 体验入口
-|-- frontend-guide/          # 开发者使用说明页面（不再作为 Console 主入口）
-|-- frontend-lab/            # 模拟实验页面
-|-- frontend-monitor/        # 实时体验页面
 |-- scripts/                 # 开发和打包脚本
 |-- src/
 |   `-- ct_breath/           # Python 应用包
 |       |-- app.py           # FastAPI / Socket.IO 应用创建
 |       |-- asgi.py          # ASGI 部署入口
 |       |-- config.py        # 外部配置读取
-|       |-- main.py          # 本地和 exe 启动入口
+|       |-- main.py          # uv 统一启动入口
+|       |-- web/             # 随 Python 包分发的完整 UI 静态源码
+|       |   |-- frontend-console/  # 统一入口，无需 Node/npm
+|       |   |-- frontend-monitor/  # 实时监测与记录分析
+|       |   |-- frontend-lab/      # 模拟实验
+|       |   |-- frontend-guide/    # 使用说明
+|       |   `-- frontend-api-docs/ # 接口说明
 |       |-- breath_process/  # 采集、滤波、峰谷识别、记录
 |       |-- http/            # HTTP API 和 Pydantic schema
 |       `-- mock_sensor/     # 模拟传感器
@@ -114,7 +115,9 @@ from ct_breath.app import create_socket_app
 
 ## 快速开始
 
-安装依赖：
+只需安装 uv；Python 和依赖由 uv 管理。运行和修改 UI 均无需 Node.js、npm 或前端构建。
+
+安装依赖（可选，`uv run` 会自动同步）：
 
 ```bash
 uv sync
@@ -123,8 +126,10 @@ uv sync
 启动后端和 Web Console：
 
 ```bash
-uv run RespiraScope
+uv run respirascope
 ```
+
+控制台会打印实际的 Backend API、Open Console、Monitor 和 Mock Lab 地址。旧命令 `uv run RespiraScope` 仍然兼容。
 
 默认访问地址：
 
@@ -162,7 +167,7 @@ port = 8088  # 替换为设备端口
 ### 2. 启动系统
 
 ```bash
-uv run RespiraScope
+uv run respirascope
 ```
 
 启动后打开控制台：
@@ -229,28 +234,54 @@ Windows 下推荐使用：
 也可以直接运行：
 
 ```bash
-uv run python scripts/dev.py
+uv run respirascope --reload
 ```
 
 开发脚本会启动：
 
 - 后端 `uvicorn --reload`
-- 单个静态 Web Console（Console 壳层由 React/Vite 构建）
+- 同一进程管理的静态 Web Console，提供全部 UI 页面
 
-Console 中的实时体验和模拟实验以两种模式组织。后端代码变更会由 uvicorn 自动重启；如果修改 `frontend-console/src/`，需要运行 `npm run build:console` 重新生成 `frontend-console/assets/console.js`。
+Console 中的实时体验和模拟实验以两种模式组织。后端代码变更会自动重启；修改 `src/ct_breath/web/` 中的 HTML/CSS/JS 后刷新浏览器即可。`scripts/dev.py` 保留为 `--reload` 的兼容入口。
 
 开发模式同样支持 backend port 自动避让。比如 `8000` 被占用时，日志会提示使用 `8001` 或其他可用端口，前端会自动连接这个新端口。
+
+也可以指定配置和端口：
+
+```bash
+uv run respirascope --config config/breath.example.toml --port 8000 --ui-port 5175
+uv run respirascope --help
+```
+
+后端与 UI 的端口都会自动避让；按 Ctrl+C 同时停止。`--config` 会传递给重载子进程，未指定时沿用原有外部配置查找规则。
+
+## 测试与 Python 包
+
+```bash
+uv run pytest -q
+# 可选的 UI 回归，同样由 uv 管理，不需要 npm
+uv sync --group ui-test
+uv run --group ui-test playwright install chromium
+uv run --group ui-test pytest tests/ui -q
+# 构建包含完整 UI 的 sdist 和 wheel
+uv build
+```
+
+安装 wheel 后也能通过 `respirascope` 启动 UI，无需在仓库目录运行。UI 测试也可通过环境变量 `BROWSER_CHANNEL=chrome` 使用已安装的 Chrome。
 
 ## 配置文件
 
 运行时配置从外部 TOML 文件读取。默认路径：
 
 ```text
-Windows: D:/ct/breath-config/breath.toml
+Windows: %LOCALAPPDATA%/RespiraScope/config/breath.toml
+macOS:   ~/Library/Application Support/RespiraScope/config/breath.toml
 Linux:   /ct/breath-config/breath.toml
 ```
 
 也可以使用同目录下的 `config.toml`。如果文件不存在，程序会以默认值自动创建。
+Windows 仍兼容优先读取已有的 `D:/ct/breath-config/` 配置；新安装不需要 D 盘或管理员权限。
+新建 Windows 配置的记录目录默认为 `%LOCALAPPDATA%/RespiraScope/records`。
 
 配置模板见 [config/breath.example.toml](config/breath.example.toml)：
 
@@ -279,8 +310,8 @@ enabled = true
 enabled = true
 
 [record]
-pre_points = 100
-post_points = 100
+pre_points = 1000
+post_points = 1000
 ```
 
 关键配置说明：
@@ -293,7 +324,7 @@ post_points = 100
 | `[console].enabled` | 是否启动 Web Console |
 | `[lab].enabled` | 是否显示模拟实验模式；仅在 mock 开启时生效 |
 | `[monitor].enabled` | 是否显示实时体验模式 |
-| `[record].pre_points` / `[record].post_points` | Record Start 前、End 后额外保存的辅助点数 |
+| `[record].pre_points` / `post_points` | 两种分箱共用的前后原始缓冲点数，默认各 1000 点（50 Hz 下各 20 秒）；重启生效，不足时取已有数据 |
 
 真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟实验模式会隐藏。
 
@@ -337,32 +368,55 @@ Console 页面包含：
 
 使用说明和接口说明保留在仓库 `docs/` 目录中，不再作为内置 Console 的主 tab。
 
+记录分析中，固定幅值分箱使用上下两条可拖动实线和中间四条等距横向虚线，形成五个幅值区间，吸气、呼气分别编号。时间分箱使用纵向虚线标记各半周期的五个时间区间。拖动上下限或修改数值会同步更新固定幅值分箱。
+
 后端会把 `/breath` 命名空间的数据广播给所有连接的 Socket.IO client，因此 Monitor 和外部业务系统可以同时连接后端。
 
 ## 数据记录
 
-Record 文件会区分用户真正选择的记录范围和前后辅助范围：
+记录保存为 **JSON v5 精简格式**，界面下载与 `POST /record/save` 使用同一套字段。旧版记录文件仍可导入，再保存时自动转换为 v5。
 
-- `record_start_sequence` / `record_end_sequence`：用户点击 Start 到 End 的真实记录区间。
-- `capture_start_sequence` / `capture_end_sequence`：实际保存的完整区间，包含前后辅助点。
-- `scans`：记录过程中通过 `scan/start`、`scan/end` 标注的多段扫描范围，每段包含 `index`、`start_sequence`、`end_sequence`。
-- 单个点的 `segment` 字段为 `pre`、`record` 或 `post`。
-- 单个点的 `scan_indexes` 字段标明该点属于哪些扫描片段，不属于任何扫描时为空数组。
+| 字段 | 内容 |
+| --- | --- |
+| `version` | 文件格式版本，当前为 `5` |
+| `startTime` / `endTime` | 记录开始、结束时间，ISO 8601 |
+| `startSeq` / `endSeq` | 用户真实记录范围，包含两个端点 |
+| `raw` / `filtered` | 含前后缓冲的完整原始、滤波点，每点为 `[序号, 幅值]`；已有时间戳时为 `[序号, 幅值, 时间戳]`，不伪造缺失时间戳 |
+| `peaks` / `valleys` | 峰谷点 `{sequence, value}`；固定幅值超界时附加 `amplitudeRange: "above"` 或 `"below"` |
+| `analysis` | 时间/幅值方式、固定/自由幅值、用户上下限 `lower` / `upper`、吸气方向 `inhaleRising` |
+| `respiratoryBins` | 实际占用区间：`start`、`end`、`direction`（`inhale` / `exhale`）、`bin`（各方向 1–5） |
+| `filterConfig` | 两种分箱共用已应用的滤波参数；新文件不再保存各模式的差异配置 |
+| `filterStatus` | 有记录时保留滤波状态，例如 `offline`、`too_short` |
+| `processingQuality` | 新离线结果的质量信息：无效区间及原因、基线恢复状态与整段偏移量；导入和重分箱保留，旧文件可缺省 |
+| `scans` | 可选；扫描标记 `{index, startSeq, endSeq, startTime?, endTime?, autoClosed?}`；只有自动结束的扫描写入 `autoClosed: true` |
 
-`record/end` 会等待 end 后辅助点采集完成，并返回当前记录的离线滤波结果；`applyFilter` 仍保留给外部系统复算任意历史 raw_data 使用。这样后续离线滤波可以利用辅助上下文，同时仍能明确区分真正记录区间和扫描区间。
+固定幅值上下限始终等分为五份，吸气、呼气分别编号。例如上下限为 0 和 100 时，共用 0、20、40、60、80、100 六个边界。某次呼吸只在 40–60 变化，则只保存实际到达的分箱，其余分箱没有区间，不按该次峰谷重新拉伸。等于上下限算区间内；仅超界峰谷写入标记，界面不显示越界提示或特殊高亮。
+
+分箱的 `start` / `end` 是采样序号（插值交点可为小数），采用 `[start,end)`，仅覆盖真实记录区间。默认上升为吸气时，吸气编号随幅值升高递增，呼气编号随幅值降低递增。
+
+以下内容不再写入文件：波形和峰谷的别名副本、重复的时间和序号字段、导出时间、时长和点数摘要、`metrics`、重复的 `binning.groups` 与边界表、每个点的 `segment` / `scan_indexes`、可推算的捕获范围和缓冲配置。导入时通过波形序号、真实记录范围、扫描范围和上下限恢复记录范围、缓冲点数、扫描归属和分箱显示。原有采样时间戳保持原值，避免导入再保存损失时间精度。
+
+页面“保存记录”保存当前分析结果。`POST /record/save` 可提交 `analysis`，后端会以所选方式对缓冲原始数据离线滤波后保存，例如：
+
+```json
+{"analysis":{"basis":"amplitude","amplitudeMode":"fixed","lower":0,"upper":100,"inhaleRising":true}}
+```
+
+省略 `analysis` 时沿用当前滤波方式，幅值方式默认使用自由幅值分箱；实时滤波配置不被修改。`/record/end` 的接口响应保持原有结构，与磁盘上的 v5 文件格式分开。
 
 ## 打包为 exe
 
-Windows 下执行：
+在 Windows 电脑上安装 uv（首次可执行 `winget install --id astral-sh.uv -e`，然后重新打开终端），
+双击 `scripts/build-exe.bat` 即可打包。也可以从项目目录执行：
 
 ```powershell
-.\scripts\build-exe.ps1
+.\scripts\build-exe.bat
 ```
 
 等价 uv 命令：
 
 ```bash
-uv run --with "pyinstaller>=6.16" python scripts/build_exe.py
+uv run --frozen --python 3.13 --with "pyinstaller>=6.16" python scripts/build_exe.py
 ```
 
 默认输出单文件：
@@ -371,12 +425,34 @@ uv run --with "pyinstaller>=6.16" python scripts/build_exe.py
 dist/RespiraScope.exe
 ```
 
-前端静态资源和配置模板会通过 PyInstaller `--add-data` 嵌入 exe。React Console 的构建产物已经位于 `frontend-console/assets/`，生产环境通常只需要分发最终 exe，再在外部配置目录放置或自动生成 `breath.toml`。
+前端静态资源和配置模板会通过 PyInstaller `--add-data` 嵌入 exe。Console 的静态源码位于 `src/ct_breath/web/frontend-console/`，生产环境通常只需要分发最终 exe，再在外部配置目录放置或自动生成 `breath.toml`。
+
+首次打包需要联网下载 Python 和依赖；运行生成的 exe 不需要安装 Python、uv 或 Node.js。
+PyInstaller 按当前系统打包，Windows exe 必须在 Windows 上生成，不能直接在 macOS/Linux 上交叉打包。
+
+双击 `dist/RespiraScope.exe` 后保留控制台，服务就绪时打印实际网页地址，例如：
+
+```text
+[RespiraScope] Backend API: http://127.0.0.1:8000
+[RespiraScope] Open Console: http://127.0.0.1:5175
+```
+
+在浏览器打开 `Open Console` 后面的地址即可使用；按 Ctrl+C 停止。
+API 默认尝试 8000，网页默认尝试 5175；端口占用时向后寻找，连续候选都不可用时由系统分配。
+程序会保留已绑定的端口直至退出，网页配置同步使用实际端口，可同时打开多个实例。
+运行期间的端口调整不会改写 TOML。真实传感器的连接端口保持配置值；旧版模拟 TCP 端口被占用时跳过该服务并提示，浏览器独立模拟仍可使用。
+
+也可在终端指定偏好端口或外部配置（端口冲突仍会自动避让）：
+
+```powershell
+.\dist\RespiraScope.exe --port 8000 --ui-port 5175
+.\dist\RespiraScope.exe --config C:\RespiraScope\breath.toml
+```
 
 如需调试展开目录包：
 
 ```powershell
-.\scripts\build-exe.ps1 --onedir
+.\scripts\build-exe.bat --onedir
 ```
 
 ## 文档
@@ -404,3 +480,5 @@ uv run pytest
 ## 许可证
 
 本项目使用 [MIT License](LICENSE) 开源。
+
+缓冲配置修改后重启生效。录制前后各保存两种模式所需点数的最大值，离线分析按模式从完整原始记录中取用对应上下文；数据不足时使用已有部分，不补点、不强制阻止开始记录。允许配置为 0。旧配置 `pre_points` / `post_points` 作为各模式未配置时的兼容回退。

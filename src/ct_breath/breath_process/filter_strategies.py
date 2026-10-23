@@ -74,10 +74,18 @@ class RealtimeFilterStrategy(FilterStrategy):
 class OfflineFilterStrategy(FilterStrategy):
     realtime = False
 
+    def __init__(self):
+        self.processing_quality = {'version':2, 'invalidIntervals':[], 'baselines':[]}
+
     def filter(
         self,
         data_to_process: Sequence[float],
         sequence_nums: Sequence[int],
         config: FilterConfig,
     ):
-        return self._filter_common(data_to_process, sequence_nums, config)
+        from ct_breath.breath_process.offline_quality import filter_offline
+        self.processing_quality = {'version':2, 'invalidIntervals':[], 'baselines':[]}
+        if len(data_to_process) < FILTER_STARTUP_DELAY:
+            return None, None
+        values, self.processing_quality = filter_offline(data_to_process, sequence_nums, config)
+        return values, sequence_nums

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mock Signal Setup</title>
+    <link rel="stylesheet" href="./styles.css?v=lab-lowpass-20261022" />
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="./workbench.css" />
+  </head>
+  <body class="lab-app">
+    <main class="lab-shell">
+      <header class="lab-toolbar">
+        <div><h1 data-i18n="app.title">模拟与滤波</h1><p data-i18n="app.subtitle">选择场景，调整参数，对照原始与滤波波形。</p></div>
+        <div id="labStatus" class="lab-status" role="status" aria-live="polite"><strong id="statusText">准备就绪</strong></div>
+      </header>
+
+      <section class="lab-workspace">
+        <section class="panel demo-panel">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker" data-i18n="demo.kicker">预设波形</span>
+              <h2 data-i18n="demo.title">选择一个呼吸场景</h2>
+            </div>
+            <div class="demo-heading-actions">
+              <p data-i18n="demo.subtitle">优先从正常、浅呼吸、噪声、屏气和体动伪影开始，最容易看出滤波和峰谷识别的边界。</p>
+              <button id="toggleDemoGridBtn" class="secondary demo-toggle" type="button" data-i18n="demo.expand">展开全部</button>
+            </div>
+          </div>
+          <div id="scenarioDemoGrid" class="demo-grid"></div>
+        </section>
+
+        <aside class="panel control-panel">
+          <div class="panel-block action-panel-block">
+            <select id="scenarioSelect" class="scenario-select-hidden" aria-hidden="true" tabindex="-1"></select>
+            <div class="actions primary-actions">
+              <div class="selected-scenario-bar" aria-live="polite">
+                <span data-i18n="panel.mockTitle">当前场景</span>
+                <strong id="selectedScenarioName">-</strong>
+              </div>
+              <button id="previewBtn" data-i18n="button.preview">生成预览</button>
+              <button id="applyMockBtn" class="secondary" data-i18n="button.applyMock">应用到实时监测</button>
+              <p class="action-hint" data-i18n="panel.scope">模拟参数用于实时信号；以下滤波参数仅用于预览。</p>
+            </div>
+          </div>
+
+          <div class="parameter-panels">
+            <fieldset class="panel-block"><legend data-i18n="panel.mockParameters">模拟参数</legend>
+              <div class="controls mock-controls">
+                <label>
+                  <span data-i18n="field.bpm">BPM</span>
+                  <span class="input-unit"><input id="bpmInput" type="number" required min="3" max="60" step="0.1" /><span>BPM</span></span>
+                </label>
+                <label>
+                  <span data-i18n="field.amplitude">Amplitude</span>
+                  <input id="amplitudeInput" type="number" required min="0" max="500" step="1" />
+                </label>
+                <label>
+                  <span data-i18n="field.noise">Noise</span>
+                  <input id="noiseInput" type="number" required min="0" max="200" step="0.5" />
+                </label>
+                <label>
+                  <span data-i18n="field.irregularity">Irregularity</span>
+                  <input id="irregularityInput" type="number" required min="0" max="1" step="0.01" />
+                </label>
+                <label>
+                  <span data-i18n="field.seconds">Seconds</span>
+                  <span class="input-unit"><input id="secondsInput" type="number" required min="6" max="300" step="1" value="40" /><span>s</span></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel-block"><legend data-i18n="panel.filterTitle">滤波与峰谷识别</legend>
+              <div class="controls filter-controls">
+                <div class="analysis-filter-controls lab-band-control"><div class="analysis-band-range lowpass-control">
+                  <div class="analysis-band-heading">
+                    <label for="bandHighInput"><span id="bandHighLabel" data-i18n="field.bandHigh">低通上限频率</span><span class="analysis-band-readout"><output id="bandHighInputValue"></output><output id="bandHighInputBpm"></output></span></label>
+                  </div>
+                  <div id="bandTrack" class="analysis-band-track" data-lowpass="true">
+                    <input id="bandHighInput" aria-labelledby="bandHighLabel" type="range" min="0" max="1000" step="1" />
+                  </div>
+                </div></div>
+                <label>
+                  <span data-i18n="field.order">Order</span>
+                  <select id="orderInput"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option></select>
+                </label>
+                <label>
+                  <span data-i18n="field.sigma">Gaussian Sigma</span>
+                  <input id="sigmaInput" type="number" required min="0.1" max="100" step="0.1" value="1.00" />
+                </label>
+                <label>
+                  <span data-i18n="field.peakRatio">Peak Ratio</span>
+                  <select id="peakRatioInput"><option value="0.45" data-i18n="sensitivity.conservative">保守</option><option value="0.3" selected data-i18n="sensitivity.standard">标准</option><option value="0.15" data-i18n="sensitivity.sensitive">灵敏</option></select>
+                </label>
+                <label class="checkbox-row">
+                  <input id="autoPeakInput" type="checkbox" checked />
+                  <span data-i18n="field.autoPeak">自动识别峰谷</span>
+                </label>
+              </div>
+              <p class="parameter-hint" data-i18n="field.bandHint">BPM = Hz × 60；方向键微调。</p>
+            </fieldset>
+          </div>
+        </aside>
+
+        <section class="panel chart-panel">
+          <div class="chart-header">
+            <div>
+              <span class="section-kicker" data-i18n="chart.kicker">输出</span>
+              <h2 data-i18n="chart.title">波形预览</h2>
+              <p id="previewSummary" class="preview-summary"></p>
+            </div>
+            <div class="chart-side">
+              <div class="metrics">
+                <div>
+                  <strong data-i18n="metric.bpm">BPM</strong>
+                  <span id="bpmMetric">-</span>
+                </div>
+                <div>
+                  <strong data-i18n="metric.quality">Quality</strong>
+                  <span id="qualityMetric">-</span>
+                </div>
+                <div>
+                  <strong data-i18n="metric.breaths">Breaths</strong>
+                  <span id="countMetric">-</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="chart-frame">
+            <div id="previewChart" role="img" aria-label="呼吸波形预览"></div>
+            <div id="chartEmpty" class="chart-empty" data-i18n="chart.empty">暂无预览数据。</div>
+          </div>
+          <p class="chart-hint" data-i18n="chart.hint">拖动底部滑块缩放，悬停查看数值；点击图例显示或隐藏曲线。</p>
+        </section>
+      </section>
+    </main>
+    <script src="../runtime-config.js"></script>
+    <script src="../shared/runtime.js?v=shared-runtime-20260605"></script>
+    <script src="../monitor/vendor/echarts.min.js"></script>
+    <script type="module" src="./app.js?v=lab-lowpass-20261022"></script>
+  </body>
+</html>

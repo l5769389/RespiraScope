@@ -33,6 +33,7 @@ class PeakValleyDetector:
         self.high_bpm = high_bpm
         self.peak_threshold_ratio = peak_threshold_ratio
         self.auto_peak_detection = auto_peak_detection
+        self.preserve_offline_baseline = False
         self.confirm_realtime_events = confirm_realtime_events
         self.confirmation_delay_points = confirmation_delay_points
         self.data_gap_reset_points = data_gap_reset_points
@@ -61,6 +62,7 @@ class PeakValleyDetector:
         self.peak_threshold_ratio = config.peak_threshold_ratio
         self.prominence = config.prominence
         self.auto_peak_detection = config.auto_peak_detection
+        self.preserve_offline_baseline = config.offline_filter == 'baseline_lowpass'
         self.confirm_realtime_events = config.confirm_realtime_events
         self.confirmation_delay_points = config.confirmation_delay_points
         self.data_gap_reset_points = config.data_gap_reset_points
@@ -136,8 +138,8 @@ class PeakValleyDetector:
         self.sequence_buffer.clear()
         self.pending_events.clear()
 
-    def calculate_metrics(self, peaks: list[dict]) -> dict:
-        return BreathRateCalculator(self.sampling_rate).metrics_from_peaks(peaks)
+    def calculate_metrics(self, peaks: list[dict], invalid_intervals=()) -> dict:
+        return BreathRateCalculator(self.sampling_rate).metrics_from_peaks(peaks, invalid_intervals)
 
     def _detect_peaks_valleys(self):
         if len(self.data_buffer) < 50:
@@ -294,6 +296,19 @@ class PeakValleyDetector:
             return max(0.01, self.prominence)
 
         signal_span = float(np.percentile(data, 95) - np.percentile(data, 5))
+        if self.preserve_offline_baseline:
+            # Slow baseline movement is retained in the measurement curve. Its
+            # full-record range must not set the threshold for shallow breaths.
+            # Estimate typical local excursions, but locate/report extrema on
+            # the original low-pass samples (no recentering or gain change).
+            local_prominences = []
+            window = max(3, int(2*self.sampling_rate*60/max(self.low_bpm, 1)) | 1)
+            for values in (data, -data):
+                indices, _ = signal.find_peaks(values, distance=self._distance_from_bpm(self.min_peak_distance))
+                if len(indices):
+                    local_prominences.extend(signal.peak_prominences(values, indices, wlen=window)[0])
+            if local_prominences:
+                signal_span = float(np.median(local_prominences))
         diff_noise = float(np.median(np.abs(np.diff(data)))) if len(data) > 1 else 0.0
         adaptive_prominence = max(
             0.5,
@@ -377,10 +392,10 @@ class BreathRateCalculator:
     def get_metrics(self) -> dict:
         return self.metrics_from_sequences(list(self.peak_sequences))
 
-    def metrics_from_peaks(self, peaks: list[dict]) -> dict:
-        return self.metrics_from_sequences([int(item["sequence"]) for item in peaks])
+    def metrics_from_peaks(self, peaks: list[dict], invalid_intervals=()) -> dict:
+        return self.metrics_from_sequences([int(item["sequence"]) for item in peaks], invalid_intervals)
 
-    def metrics_from_sequences(self, peak_sequences: list[int]) -> dict:
+    def metrics_from_sequences(self, peak_sequences: list[int], invalid_intervals=()) -> dict:
         if len(peak_sequences) < 2:
             return {
                 "bpm": None,
@@ -389,7 +404,9 @@ class BreathRateCalculator:
                 "interval_cv": None,
             }
 
-        intervals = np.diff(sorted(peak_sequences)) / self.sampling_rate
+        ordered = sorted(peak_sequences)
+        intervals = np.asarray([b-a for a,b in zip(ordered[:-1],ordered[1:])
+                                if not any(a < i['end'] and b >= i['start'] for i in invalid_intervals)]) / self.sampling_rate
         intervals = intervals[intervals > 0]
         if len(intervals) == 0:
             return {

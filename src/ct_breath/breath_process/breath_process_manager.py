@@ -8,13 +8,14 @@ from ct_breath.breath_process.peak_valley_detector import (
     PeakValleyDetector,
     PeakValleyHandler,
 )
-from ct_breath.breath_process.filter_strategies import FILTER_STARTUP_DELAY
+from ct_breath.breath_process.offline_quality import detect_valid_extrema
 from ct_breath.breath_process.record_manager import RecordManager
+from ct_breath.breath_process.filter_context import recording_padding, select_filter_context
 from ct_breath.breath_process.send_to_client import DataSender
 from ct_breath.breath_process.signal_processor import SignalProcessor
 from ct_breath.breath_process.signal_quality import SignalQualityAnalyzer
 from ct_breath.config import AppConfig, get_config
-from ct_breath.http.schemas import ApplyFilterConfig, FilterConfig
+from ct_breath.http.schemas import ApplyFilterConfig, FilterConfig, RecordAnalysisConfig, normalize_filter_config
 from ct_breath.logger import logger
 from ct_breath.mock_sensor.breath_simulator import MockBreathConfig
 from ct_breath.socket_io_service import set_snapshot_provider
@@ -41,10 +42,7 @@ class BreathProcessSystem:
         )
         self.signal_processor = SignalProcessor()
         self.queue_manager = DataQueueManager()
-        self.record_manager = RecordManager(
-            pre_points=config.record_pre_points,
-            post_points=config.record_post_points,
-        )
+        self.record_manager = RecordManager(*recording_padding(config, self.signal_processor.filter_config))
         self.data_sender = (
             DataSender(self.queue_manager, send_message=send_message)
             if send_message
@@ -91,6 +89,7 @@ class BreathProcessSystem:
         self.state = "running"
         self.last_error = None
         self.signal_processor.update_filter_config(config)
+        self.record_manager.configure_padding(*recording_padding(self.config, config))
         self._sync_detection_config(config)
         self._attach_receiver_handlers()
         self._ensure_processing_tasks()
@@ -127,6 +126,7 @@ class BreathProcessSystem:
             raise ValueError("Receive has not been started")
         if self.record_manager.latest_raw_sequence is None:
             raise ValueError("No raw data has been received")
+        self.record_manager.configure_padding(*recording_padding(self.config, self.signal_processor.filter_config))
         return self.record_manager.start_record()
 
     def stop_record(self):
@@ -135,7 +135,7 @@ class BreathProcessSystem:
     def reset_record(self):
         return self.record_manager.reset_record()
 
-    async def stop_record_and_filter(self, post_timeout_seconds: float = 10.0):
+    async def stop_record_and_filter(self, post_timeout_seconds: float | None = None):
         if self.record_manager.record_start_time is None:
             raise ValueError("No recording has been started")
         if self.record_manager.recording:
@@ -145,23 +145,54 @@ class BreathProcessSystem:
         if not self.record_manager.raw_record_queue:
             raise ValueError("No record data is available")
 
+        filter_config = self._record_filter_config()
         raw_points = self.record_manager.raw_points_for_filter()
-        filtered_data, peak, valley, metrics, filter_status = await self._offline_filter_points(
+        filtered_data, peak, valley, metrics, filter_status, quality = await self._offline_filter_points(
             raw_points,
-            self.signal_processor.filter_config,
+            filter_config,
+            self.record_manager.record_start_sequence, self.record_manager.record_end_sequence,
         )
         record_data = self.record_manager.build_record_data(
-            self.signal_processor.filter_config,
+            filter_config,
             filtered_data=filtered_data,
             peak_data=peak,
             valley_data=valley,
             metrics=metrics,
             filter_status=filter_status,
+            processing_quality=quality,
         )
         return record_data
 
-    def save_record(self, folder_path):
-        return self.record_manager.save_record(self.signal_processor.filter_config, folder_path)
+    def _record_filter_config(self):
+        config = self.signal_processor.filter_config.model_copy(deep=True)
+        config.offline_filter = 'baseline_lowpass'
+        config.lowpass_order = 4
+        config.bandpass_mode = 'custom'
+        config.highpass_cutoff = min(2.0, config.sampling_rate * .45)
+        config.gaussian_sigma = 1
+        config.peak_threshold_ratio = .3
+        return normalize_filter_config(config)
+
+    async def save_record(self, folder_path, analysis=None):
+        self.record_manager.validate_save()
+        record_start = self.record_manager.record_start_time
+        filter_config = self._record_filter_config()
+        options = RecordAnalysisConfig.model_validate(
+            analysis if analysis is not None else {'basis': filter_config.processing_mode}
+        ).model_dump(exclude_none=True)
+        filter_config.processing_mode = options['basis']
+        filter_config = normalize_filter_config(filter_config)
+        filtered, peak, valley, metrics, status, quality = await self._offline_filter_points(
+            self.record_manager.raw_points_for_filter(), filter_config,
+            self.record_manager.record_start_sequence, self.record_manager.record_end_sequence,
+        )
+        if self.record_manager.record_start_time != record_start:
+            raise ValueError("Recording changed while preparing the export; save the current recording again")
+        return await self.record_manager.save_record(
+            filter_config, folder_path, analysis=options, filtered_data=filtered,
+            peak_data=peak, valley_data=valley, metrics=metrics, filter_status=status,
+            processing_quality=quality,
+        )
 
     def start_scan(self):
         return self.record_manager.start_scan()
@@ -171,19 +202,14 @@ class BreathProcessSystem:
 
     def update_filter_config(self, config: FilterConfig):
         self.signal_processor.update_filter_config(config)
+        self.record_manager.configure_padding(*recording_padding(self.config, config))
         self._sync_detection_config(config)
 
-    async def apply_filter(self, config: ApplyFilterConfig):
-        offline_processor = SignalProcessor()
-        offline_processor.update_filter_config(config.filter_config)
-        offline_detector = PeakValleyDetector()
-        offline_detector.update_from_filter_config(config.filter_config)
-        if not config.raw_data:
-            return [], [], [], offline_processor.filter_config.model_dump(), offline_detector.calculate_metrics([])
-        filtered_data, filtered_seq, list_filter_data = await offline_processor.filter_data(config.raw_data)
-        peak, valley = offline_detector.detect_peak_valley_batch(filtered_data, filtered_seq)
-        metrics = offline_detector.calculate_metrics(peak)
-        return list_filter_data, peak, valley, offline_processor.filter_config.model_dump(), metrics
+    async def apply_filter(self, config: ApplyFilterConfig, app_config=None):
+        data, peak, valley, metrics, status, quality = await self._offline_filter_points(
+            config.raw_data, config.filter_config, config.record_start_sequence,
+            config.record_end_sequence, app_config=app_config)
+        return data, peak, valley, config.filter_config.model_dump(), metrics, quality
 
     def status(self) -> dict:
         queue_status = self.queue_manager.status()
@@ -231,49 +257,38 @@ class BreathProcessSystem:
         self.peak_valley_detector.update_from_filter_config(config)
         self.signal_quality_analyzer.update_sampling_rate(config.sampling_rate)
 
-    async def _wait_for_post_record_padding(self, timeout_seconds: float):
+    async def _wait_for_post_record_padding(self, timeout_seconds: float | None = None):
         if not self.record_manager.post_recording:
             return
 
+        if timeout_seconds is None:
+            remaining = max(0, (self.record_manager.capture_end_sequence or 0)
+                            - (self.record_manager.latest_raw_sequence or 0))
+            timeout_seconds = remaining / self.signal_processor.filter_config.sampling_rate + 8
         loop = asyncio.get_running_loop()
         deadline = loop.time() + max(0.0, float(timeout_seconds))
         while self.record_manager.post_recording and loop.time() < deadline:
             await asyncio.sleep(0.04)
 
-    async def _offline_filter_points(self, raw_points, filter_config: FilterConfig):
+    async def _offline_filter_points(self, raw_points, filter_config: FilterConfig,
+                                     record_start=None, record_end=None, *, app_config=None):
+        raw_points = select_filter_context(raw_points, app_config or self.config,
+                                           filter_config.processing_mode, record_start, record_end)
         detector = PeakValleyDetector()
         detector.update_from_filter_config(filter_config)
+        quality = {'version':2, 'invalidIntervals':[], 'baselines':[]}
         if not raw_points:
-            return [], [], [], detector.calculate_metrics([]), "no_data"
-
-        filtered_data = []
-        peak = []
-        valley = []
-        for raw_segment in self._continuous_raw_segments(raw_points, filter_config.data_gap_reset_points):
-            if len(raw_segment) < FILTER_STARTUP_DELAY:
-                continue
-
-            processor = SignalProcessor()
-            processor.update_filter_config(filter_config)
-            segment_filtered, segment_sequences, segment_payload = await processor.filter_data(raw_segment)
-            if segment_filtered is None or segment_sequences is None or not segment_payload:
-                continue
-
-            filtered_data.extend(segment_payload)
-            segment_peak, segment_valley = detector.detect_peak_valley_batch(
-                segment_filtered,
-                segment_sequences,
-            )
-            peak.extend(segment_peak)
-            valley.extend(segment_valley)
-
-        if not filtered_data:
-            return [], [], [], detector.calculate_metrics([]), "too_short"
-
-        peak = sorted(peak, key=lambda item: item["sequence"])
-        valley = sorted(valley, key=lambda item: item["sequence"])
-        metrics = detector.calculate_metrics(peak)
-        return filtered_data, peak, valley, metrics, "offline"
+            return [], [], [], detector.calculate_metrics([]), "no_data", quality
+        processor = SignalProcessor()
+        processor.update_filter_config(filter_config)
+        values, sequences, filtered_data = await processor.filter_data(raw_points)
+        quality = processor.offline_strategy.processing_quality
+        if values is None:
+            return [], [], [], detector.calculate_metrics([]), "too_short", quality
+        peak, valley = detect_valid_extrema(detector, values, sequences,
+            quality['invalidIntervals'], filter_config.data_gap_reset_points)
+        metrics = detector.calculate_metrics(peak, quality['invalidIntervals'])
+        return filtered_data, peak, valley, metrics, "offline", quality
 
     def _continuous_raw_segments(self, raw_points, gap_threshold):
         if not raw_points:

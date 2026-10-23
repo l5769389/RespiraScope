@@ -6,9 +6,13 @@ from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 
-from ct_breath.http.schemas import FilterConfig
+from ct_breath.http.schemas import FilterConfig, RecordAnalysisConfig
+from ct_breath.breath_process.respiratory_bins import (
+    annotate_extrema, build_binning_metadata, build_respiratory_bins,
+)
 from ct_breath.logger import logger
 from ct_breath.time_utils import iso_time
+from ct_breath.breath_process.record_file import compact_record_data
 
 
 MAX_RAW_RECORD_POINTS = 50 * 60 * 20
@@ -137,6 +141,15 @@ class RecordManager:
         self.active_scan = None
         self.next_scan_index = 1
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="file_writer")
+
+    def configure_padding(self, pre_points, post_points):
+        # A record already in progress keeps its capture boundaries unchanged.
+        if self.recording or self.post_recording:
+            return
+        self.pre_points = max(self.pre_points, int(pre_points))
+        self.post_points = max(self.post_points, int(post_points))
+        for name in ('raw_pre_buffer', 'filter_pre_buffer', 'peak_pre_buffer', 'valley_pre_buffer'):
+            setattr(self, name, deque(getattr(self, name), maxlen=max(1, self.pre_points)))
 
     def start_record(self):
         if self.recording:
@@ -288,7 +301,7 @@ class RecordManager:
         )
         return scan_snapshot(scan)
 
-    async def save_record(self, filter_config: FilterConfig, folder_path=None):
+    def validate_save(self):
         if self.record_start_time is None:
             raise ValueError("No recording has been started")
         if self.recording:
@@ -298,6 +311,12 @@ class RecordManager:
         if not self.raw_record_queue and not self.filter_record_queue:
             raise ValueError("No record data is available to save")
 
+    async def save_record(self, filter_config: FilterConfig, folder_path=None, **record_options):
+        self.validate_save()
+        time_filter_config = record_options.pop('time_filter_config', None)
+        record_data = compact_record_data(
+            self.build_record_data(filter_config, **record_options), time_filter_config,
+        )
         fullpath = None
         try:
             make_folder(folder_path)
@@ -307,7 +326,6 @@ class RecordManager:
             logger.error("save_record error: %s", e)
             raise ValueError(f"Invalid record folder: {folder_path}") from e
 
-        record_data = self.build_record_data(filter_config)
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             self.executor,
@@ -326,6 +344,8 @@ class RecordManager:
         valley_data=None,
         metrics=None,
         filter_status="live",
+        analysis=None,
+        processing_quality=None,
     ):
         raw_data = annotate_points(
             list(self.raw_record_queue),
@@ -367,8 +387,22 @@ class RecordManager:
         elif raw_end is not None and not self.record_complete and raw_end < capture_end_sequence:
             capture_end_sequence = raw_end
 
+        options = RecordAnalysisConfig.model_validate(
+            analysis if analysis is not None else {'basis': filter_config.processing_mode}
+        ).model_dump(exclude_none=True)
+        bins = build_respiratory_bins(
+            filtered_data, peak_data, valley_data, options,
+            gap=filter_config.data_gap_reset_points,
+            start=self.record_start_sequence, end=self.record_end_sequence,
+            invalid_intervals=(processing_quality or {}).get('invalidIntervals', []),
+        )
+        annotate_extrema(peak_data, options)
+        annotate_extrema(valley_data, options)
         record_data = {
-            "version": 2,
+            "version": 4,
+            "analysis": options,
+            "respiratoryBins": bins,
+            "binning": build_binning_metadata(options, bins),
             "record_time": {
                 "start_time": iso_time(self.record_start_time),
                 "end_time": iso_time(self.record_end_time),
@@ -394,6 +428,8 @@ class RecordManager:
             "valley": valley_data,
             "metrics": metrics,
         }
+        if processing_quality is not None:
+            record_data['processingQuality'] = processing_quality
         return record_data
 
     def raw_points_for_filter(self):

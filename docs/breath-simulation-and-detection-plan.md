@@ -46,7 +46,7 @@ Build a repeatable local workflow for testing breath filtering and peak/valley d
   - preview the whole generated mock signal.
   - preview the filtered signal and detected peaks/valleys.
 - User realtime monitor:
-  - lives in this backend project as `frontend-monitor/`.
+  - lives in this backend project as `src/ct_breath/web/frontend-monitor/`.
   - does not expose mock patient controls.
   - subscribes to realtime filtered data, peaks, valleys, and metrics.
 - Runtime config:
@@ -64,23 +64,23 @@ Build a repeatable local workflow for testing breath filtering and peak/valley d
 
 ## Backend-local Test UI
 
-Create `frontend-lab/` inside this backend project. It is a lightweight static page that talks to the backend APIs and can be opened directly or served with:
+Create `src/ct_breath/web/frontend-lab/` inside this backend project. It is a lightweight static page that talks to the backend APIs and can be opened directly or served with:
 
 ```bash
-uv run python -m http.server 5174 -d frontend-lab
+uv run python -m http.server 5174 -d src/ct_breath/web/frontend-lab
 ```
 
 It is intentionally independent from `ct-mock-ui`, so filtering and simulation work can be debugged even when the main frontend is not running.
 
 ## Backend-local Realtime Monitor
 
-Create `frontend-monitor/` inside this backend project. It is a lightweight
+Create `src/ct_breath/web/frontend-monitor/` inside this backend project. It is a lightweight
 user-facing monitor that subscribes to the backend Socket.IO namespace and
 renders raw data, filtered data, detected peaks/valleys, BPM, and breathing
 stability with ECharts.
 
 ```bash
-uv run python -m http.server 5175 -d frontend-monitor
+uv run python -m http.server 5175 -d src/ct_breath/web/frontend-monitor
 ```
 
 It is intentionally separate from `frontend-lab`: the monitor observes realtime

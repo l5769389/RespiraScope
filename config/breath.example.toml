@@ -27,9 +27,10 @@ enabled = true
 enabled = true
 
 [record]
-# Extra samples kept before Record Start and after Record End.
-pre_points = 100
-post_points = 100
+# Shared offline context; loaded on startup. At 50 Hz, 1000 samples = 20 s.
+# If less context is available, use the existing portion.
+pre_points = 1000
+post_points = 1000
 # Server-side root for temporary session record files.
 storage_root = "D:/ct/breath-file"
 

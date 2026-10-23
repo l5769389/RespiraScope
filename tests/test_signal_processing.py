@@ -64,3 +64,20 @@ def test_filter_returns_none_for_sudden_short_stream():
     assert filtered is None
     assert sequences is None
     assert payload is None
+
+
+def test_amplitude_mode_preserves_fast_breath_amplitude_in_buffered_middle():
+    values = breathing_wave(seconds=180, bpm=36)
+    outputs = {}
+    for mode in ['time', 'amplitude']:
+        config = normalize_filter_config(FilterConfig(processing_mode=mode, order=2))
+        filtered, _ = OfflineFilterStrategy().filter(values, list(range(len(values))), config)
+        outputs[mode] = np.ptp(filtered[3000:6000])
+    assert outputs['amplitude'] > 190
+    assert outputs['time'] < 140
+
+
+def test_amplitude_mode_does_not_change_peak_detection_bpm_limits():
+    config = normalize_filter_config(FilterConfig(processing_mode='amplitude', low_bpm=8, high_bpm=35))
+    assert (config.lowpass_cutoff, config.highpass_cutoff) == (0.03, 2)
+    assert (config.low_bpm, config.high_bpm) == (8, 35)

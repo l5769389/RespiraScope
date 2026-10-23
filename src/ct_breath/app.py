@@ -3,7 +3,10 @@ from contextlib import asynccontextmanager
 
 import socketio
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from ct_breath.breath_process.breath_process_manager import breath_system
 from ct_breath.config import AppConfig, get_config
@@ -90,7 +93,15 @@ def create_app(app_config: AppConfig | None = None) -> FastAPI:
         lifespan=lifespan_for(config),
     )
     app.state.config = config
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(_request, exc):
+        # Retain field paths and reasons without echoing large waveforms or
+        # non-JSON values (NaN/Infinity) back into the error serializer.
+        errors = [{key: item[key] for key in ('loc', 'msg', 'type')} for item in exc.errors()]
+        return JSONResponse(status_code=422, content={'detail': errors})
+
     app.state.session_manager = SessionManager(config)
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

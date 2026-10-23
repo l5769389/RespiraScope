@@ -155,3 +155,24 @@ def test_session_cleanup_removes_temp_record_folder(tmp_path):
     asyncio.run(manager.stop_session("session-a"))
 
     assert not record_folder.exists()
+
+
+def test_offline_amplitude_filter_leaves_realtime_configuration_unchanged():
+    import math
+    client = TestClient(create_app(AppConfig(enable_mock_signal=True, enable_front_console=False)))
+    headers = {'X-RespiraScope-Session': 'offline-binning'}
+    client.post('/setRTFilterParams', headers=headers, json={'low_bpm': 8, 'high_bpm': 32})
+    raw = [[i, 500 + 100 * math.sin(i * math.pi / 100)] for i in range(1000)]
+    response = client.post('/applyFilter', headers=headers, json={
+        'raw_data': raw, 'filter_config': {'processing_mode': 'amplitude'},
+    })
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload['data']) == len(raw)
+    assert payload['filter_config']['lowpass_cutoff'] == 0.03
+    assert payload['filter_config']['highpass_cutoff'] == 2
+    assert payload['filter_config']['processing_mode'] == 'amplitude'
+    live = client.get('/stream/status', headers=headers).json()['data']['filter_config']
+    assert live['processing_mode'] == 'time'
+    assert live['lowpass_cutoff'] == 8 / 60
+    assert live['highpass_cutoff'] == 32 / 60

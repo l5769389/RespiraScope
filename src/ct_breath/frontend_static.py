@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from ct_breath.config import AppConfig, get_config
+from ct_breath.breath_process.filter_context import recording_padding, mode_padding
 from ct_breath.session_ids import SESSION_HEADER, SESSION_QUERY_PARAM
 
 
@@ -31,6 +32,7 @@ def endpoint_text(name: str, host: str, port: int) -> str:
 
 def runtime_config_payload(app_config: AppConfig) -> dict:
     backend_host = display_host(app_config.backend_host)
+    pre_points, post_points = recording_padding(app_config)
     return {
         "backendHost": backend_host,
         "backendPort": app_config.backend_port,
@@ -54,9 +56,10 @@ def runtime_config_payload(app_config: AppConfig) -> dict:
         "labHost": display_host(app_config.console_host),
         "labPort": app_config.console_port if app_config.console_enabled and app_config.lab_enabled else None,
         "record": {
-            "prePoints": app_config.record_pre_points,
-            "postPoints": app_config.record_post_points,
+            "prePoints": pre_points,
+            "postPoints": post_points,
             "storageRoot": str(app_config.record_storage_root),
+            "filterPadding": {mode:dict(zip(("prePoints","postPoints"), mode_padding(app_config, mode))) for mode in ("time","amplitude")},
         },
         "session": {
             "header": SESSION_HEADER,
@@ -131,6 +134,7 @@ def frontend_directory(directory: str) -> Path:
         candidates.append(Path(getattr(sys, "_MEIPASS", "")) / directory)
         candidates.append(Path(sys.executable).resolve().parent / directory)
     candidates.extend([
+        Path(__file__).resolve().parent / "web" / directory,
         Path.cwd() / directory,
         project_root() / directory,
     ])
@@ -141,7 +145,7 @@ def frontend_directory(directory: str) -> Path:
     return candidates[0].resolve()
 
 
-def create_static_server(directory: str, host: str, port: int, app_config: AppConfig):
+def create_static_server(directory: str, host: str, port: int, app_config: AppConfig, *, sock=None):
     root = frontend_directory(directory)
     if not root.is_dir():
         raise FileNotFoundError(f"Static directory does not exist: {root}")
@@ -159,7 +163,15 @@ def create_static_server(directory: str, host: str, port: int, app_config: AppCo
         app_config=app_config,
         frontend_roots=frontend_roots,
     )
-    return ThreadingHTTPServer((host, port), handler), root
+    if sock is None:
+        return ThreadingHTTPServer((host, port), handler), root
+    server = ThreadingHTTPServer((host, port), handler, bind_and_activate=False)
+    server.socket.close()
+    server.socket = sock
+    server.server_address = sock.getsockname()
+    server.server_name = host
+    server.server_port = server.server_address[1]
+    return server, root
 
 
 def serve_static_frontend(directory: str, host: str, port: int, name: str, app_config: AppConfig | None = None) -> int:
@@ -176,8 +188,8 @@ def serve_static_frontend(directory: str, host: str, port: int, name: str, app_c
     return 0
 
 
-def start_static_frontend(directory: str, host: str, port: int, name: str, app_config: AppConfig):
-    server, root = create_static_server(directory, host, port, app_config)
+def start_static_frontend(directory: str, host: str, port: int, name: str, app_config: AppConfig, *, sock=None):
+    server, root = create_static_server(directory, host, port, app_config, sock=sock)
     thread = threading.Thread(target=server.serve_forever, name=name, daemon=True)
     thread.start()
     return {

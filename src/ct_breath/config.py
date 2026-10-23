@@ -1,24 +1,37 @@
 import os
+import sys
 import tomllib
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 
-WINDOWS_CONFIG_PATH = Path("D:/ct/breath-config/breath.toml")
+WINDOWS_DATA_ROOT = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "RespiraScope"
+WINDOWS_CONFIG_PATH = WINDOWS_DATA_ROOT / "config" / "breath.toml"
+MACOS_CONFIG_PATH = Path.home() / "Library" / "Application Support" / "RespiraScope" / "config" / "breath.toml"
 LINUX_CONFIG_PATH = Path("/ct/breath-config/breath.toml")
-WINDOWS_RECORD_STORAGE_ROOT = Path("D:/ct/breath-file")
+WINDOWS_RECORD_STORAGE_ROOT = WINDOWS_DATA_ROOT / "records"
+MACOS_RECORD_STORAGE_ROOT = Path.home() / "Library" / "Application Support" / "RespiraScope" / "records"
 LINUX_RECORD_STORAGE_ROOT = Path("/ct/breath-records")
 CONFIG_DIRECTORIES = [
     Path("D:/ct/breath-config"),
+    WINDOWS_CONFIG_PATH.parent,
+    MACOS_CONFIG_PATH.parent,
     Path("/ct/breath-config"),
 ]
 CONFIG_FILENAMES = [
     "breath.toml",
     "config.toml",
 ]
-DEFAULT_CONFIG_PATH = WINDOWS_CONFIG_PATH if os.name == "nt" else LINUX_CONFIG_PATH
-DEFAULT_RECORD_STORAGE_ROOT = WINDOWS_RECORD_STORAGE_ROOT if os.name == "nt" else LINUX_RECORD_STORAGE_ROOT
+if sys.platform == "win32":
+    DEFAULT_CONFIG_PATH = WINDOWS_CONFIG_PATH
+    DEFAULT_RECORD_STORAGE_ROOT = WINDOWS_RECORD_STORAGE_ROOT
+elif sys.platform == "darwin":
+    DEFAULT_CONFIG_PATH = MACOS_CONFIG_PATH
+    DEFAULT_RECORD_STORAGE_ROOT = MACOS_RECORD_STORAGE_ROOT
+else:
+    DEFAULT_CONFIG_PATH = LINUX_CONFIG_PATH
+    DEFAULT_RECORD_STORAGE_ROOT = LINUX_RECORD_STORAGE_ROOT
 DEFAULT_CONFIG_TEXT = """[mock]
 # Enable the built-in simulated breath signal server and /mock/* APIs.
 enabled = true
@@ -48,9 +61,10 @@ enabled = true
 enabled = true
 
 [record]
-# Extra samples kept before Record Start and after Record End.
-pre_points = 100
-post_points = 100
+# Shared offline context in samples; loaded on startup. At 50 Hz: 1000=20s.
+# Use available samples when acquisition context is shorter.
+pre_points = 1000
+post_points = 1000
 # Server-side root for temporary session record files.
 storage_root = "{record_storage_root}"
 
@@ -85,8 +99,13 @@ class AppConfig:
     enable_front_monitor: bool = True
     monitor_host: str = "127.0.0.1"
     monitor_port: int = 5175
-    record_pre_points: int = 100
-    record_post_points: int = 100
+    # Shared settings; None migrates legacy mode fields using their per-side maximum.
+    record_pre_points: int | None = None
+    record_post_points: int | None = None
+    record_time_pre_points: int = 250
+    record_time_post_points: int = 250
+    record_amplitude_pre_points: int = 1000
+    record_amplitude_post_points: int = 1000
     record_storage_root: Path = DEFAULT_RECORD_STORAGE_ROOT
     session_idle_timeout_seconds: int = 14400
     public_base_path: str = ""
@@ -125,7 +144,9 @@ def with_runtime_ports(
 
 def resolve_config_path(path: str | Path | None = None) -> Path:
     if path:
-        return Path(path)
+        return Path(path).expanduser()
+    if override := os.environ.get("RESPIRASCOPE_CONFIG"):
+        return Path(override).expanduser()
 
     for directory in CONFIG_DIRECTORIES:
         for filename in CONFIG_FILENAMES:
@@ -226,8 +247,12 @@ def get_config(path: str | Path | None = None) -> AppConfig:
         enable_front_monitor=config_bool(monitor.get("enabled"), defaults.enable_front_monitor),
         monitor_host=config_str(monitor.get("host"), defaults.monitor_host),
         monitor_port=config_int(monitor.get("port"), defaults.monitor_port),
-        record_pre_points=max(0, config_int(record.get("pre_points"), defaults.record_pre_points)),
-        record_post_points=max(0, config_int(record.get("post_points"), defaults.record_post_points)),
+        record_pre_points=max(0, int(record['pre_points'])) if 'pre_points' in record else None,
+        record_post_points=max(0, int(record['post_points'])) if 'post_points' in record else None,
+        record_time_pre_points=max(0, config_int(record.get("time_pre_points"), config_int(record.get("pre_points"), defaults.record_time_pre_points))),
+        record_time_post_points=max(0, config_int(record.get("time_post_points"), config_int(record.get("post_points"), defaults.record_time_post_points))),
+        record_amplitude_pre_points=max(0, config_int(record.get("amplitude_pre_points"), config_int(record.get("pre_points"), defaults.record_amplitude_pre_points))),
+        record_amplitude_post_points=max(0, config_int(record.get("amplitude_post_points"), config_int(record.get("post_points"), defaults.record_amplitude_post_points))),
         record_storage_root=Path(config_str(record.get("storage_root"), str(defaults.record_storage_root))),
         session_idle_timeout_seconds=max(
             60,

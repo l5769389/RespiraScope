@@ -1,10 +1,16 @@
 import inspect
 
-from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 
 from ct_breath.config import AppConfig, get_config
+from ct_breath.breath_process.peak_valley_detector import PeakValleyDetector
+from ct_breath.breath_process.record_file import compact_record_data
+from ct_breath.breath_process.offline_quality import detect_valid_extrema
+from ct_breath.breath_process.filter_context import recording_padding, mode_padding
 from ct_breath.http.schemas import (
     ApplyFilterConfig,
+    DetectPeaksConfig,
     FilterConfig,
     MockBreathConfigRequest,
     MockBreathPreviewRequest,
@@ -43,6 +49,25 @@ def success_response(data=None, message: str = "ok", **extra):
     }
     response.update(extra)
     return response
+
+
+def prefers_compact_record(accept: str, media_type: str) -> bool:
+    qualities = {}
+    for entry in accept.lower().split(','):
+        mime, *parameters = entry.strip().split(';')
+        quality = 1.0
+        for parameter in parameters:
+            name, _, value = parameter.strip().partition('=')
+            if name == 'q':
+                try:
+                    quality = float(value)
+                except ValueError:
+                    quality = 0.0
+        qualities[mime] = quality if 0 <= quality <= 1 else 0.0
+    # Compact records require an explicit opt-in; wildcards keep legacy clients compatible.
+    compact_quality = qualities.get(media_type, 0.0)
+    legacy_quality = qualities.get('application/json', qualities.get('application/*', qualities.get('*/*', 0.0)))
+    return compact_quality > 0 and compact_quality >= legacy_quality
 
 
 def strip_scan_indexes(points):
@@ -113,7 +138,11 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         return success_response(data, message="healthy", **{key: value for key, value in data.items() if key != "status"})
 
     @app.get("/runtime/config")
-    async def runtime_config():
+    async def runtime_config(request: Request):
+        pre_points, post_points = recording_padding(app_config)
+        if session_id_from_request(request):
+            record_manager = breath_system_for_request(request).record_manager
+            pre_points, post_points = record_manager.pre_points, record_manager.post_points
         data = {
             "mock_signal_enabled": app_config.enable_mock_signal,
             "config_path": str(app_config.config_path),
@@ -139,9 +168,10 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
             "monitor_host": app_config.console_host,
             "monitor_port": app_config.console_port if app_config.console_enabled and app_config.monitor_enabled else None,
             "record": {
-                "pre_points": app_config.record_pre_points,
-                "post_points": app_config.record_post_points,
+                "pre_points": pre_points,
+                "post_points": post_points,
                 "storage_root": str(app_config.record_storage_root),
+                "filter_padding": {mode:dict(zip(("pre_points","post_points"), mode_padding(app_config, mode))) for mode in ("time","amplitude")},
             },
         }
         return success_response(data, **data)
@@ -157,6 +187,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
 
     @app.post("/startReceive")
     async def start_receive(request: Request, config: FilterConfig | None = Body(default=None)):
+        if config and config.offline_filter != 'bandpass':
+            raise HTTPException(status_code=422, detail="Baseline-preserving low-pass is offline only")
         breath_system = breath_system_for_request(request)
         config = normalize_filter_config(config or FilterConfig())
         already_started = breath_system.is_start and breath_system.state == "running"
@@ -185,6 +217,8 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
 
     @app.post("/setRTFilterParams")
     async def set_filter(request: Request, config: FilterConfig | None = Body(default=None)):
+        if config and config.offline_filter != 'bandpass':
+            raise HTTPException(status_code=422, detail="Baseline-preserving low-pass is offline only")
         breath_system = breath_system_for_request(request)
         config = normalize_filter_config(config or FilterConfig())
         breath_system.update_filter_config(config)
@@ -210,12 +244,17 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
         )
 
     @app.post("/record/end")
-    async def end_record_breath(request: Request):
+    async def end_record_breath(request: Request, response: Response):
         breath_system = breath_system_for_request(request)
         try:
             record = await breath_system.stop_record_and_filter()
         except ValueError as exc:
             raise record_http_error(exc, breath_system) from exc
+        media_type = 'application/vnd.respirascope.record.v5+json'
+        response.headers['Vary'] = 'Accept'
+        if prefers_compact_record(request.headers.get('accept', ''), media_type):
+            return JSONResponse(success_response(compact_record_data(record), message="Record ended and offline filter completed"),
+                                media_type=media_type, headers={'Vary': 'Accept'})
         return success_response(
             strip_scan_indexes(record.get("filtered_data", [])),
             message="Record ended and offline filter completed",
@@ -230,6 +269,11 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
             record_end_sequence=record.get("record_end_sequence"),
             record_time=record.get("record_time", {}),
             record_padding=record.get("record_padding", {}),
+            analysis=record.get("analysis"),
+            respiratoryBins=record.get("respiratoryBins", []),
+            binning=record.get("binning"),
+            **({'processingQuality':record['processingQuality']} if 'processingQuality' in record else {}),
+            **({'filter_config': record['filter_params']} if 'filter_params' in record else {}),
         )
 
     @app.post("/record/reset")
@@ -282,24 +326,41 @@ def register_core_routes(app: FastAPI, app_config: AppConfig):
             breath_system = breath_system_for_request(request)
             folder_path = config.folder_path
         try:
-            save_result = breath_system.save_record(folder_path)
+            save_result = (
+                breath_system.save_record(folder_path, analysis=config.analysis.model_dump(exclude_none=True))
+                if config.analysis is not None else breath_system.save_record(folder_path)
+            )
             file_path = await save_result if inspect.isawaitable(save_result) else save_result
         except ValueError as exc:
             raise record_http_error(exc, breath_system) from exc
         return success_response({"file_path": file_path})
+
+    @app.post("/detectPeaks")
+    async def detect_peaks(config: DetectPeaksConfig):
+        detector = PeakValleyDetector()
+        detector.update_from_filter_config(config.filter_config)
+        peak, valley = detect_valid_extrema(detector,
+            [point[1] for point in config.filtered_data],
+            [point[0] for point in config.filtered_data],
+            [item.model_dump() for item in config.invalid_intervals],
+            config.filter_config.data_gap_reset_points,
+        )
+        return success_response(peak=peak, valley=valley,
+            metrics=detector.calculate_metrics(peak,[item.model_dump() for item in config.invalid_intervals]))
 
     @app.post("/applyFilter")
     async def apply_filter(request: Request, config: ApplyFilterConfig | None = Body(default=None)):
         breath_system = breath_system_for_request(request)
         config = config or ApplyFilterConfig()
         config.filter_config = normalize_filter_config(config.filter_config)
-        filter_data, peak, valley, filter_config, metrics = await breath_system.apply_filter(config)
+        filter_data, peak, valley, filter_config, metrics, quality = await breath_system.apply_filter(config, app_config=app_config)
         return success_response(
             filter_data,
             peak=peak,
             valley=valley,
             filter_config=filter_config,
             metrics=metrics,
+            processingQuality=quality,
         )
 
 
