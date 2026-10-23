@@ -3,11 +3,8 @@ from collections import deque
 from typing import List
 
 from ct_breath.breath_process.filter_strategies import (
-    FILTER_STARTUP_DELAY,
     OfflineFilterStrategy,
     RealtimeFilterStrategy,
-    butterworth_filter,
-    gaussian_smooth,
 )
 from ct_breath.http.schemas import FilterConfig
 from ct_breath.logger import logger

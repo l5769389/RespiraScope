@@ -9,6 +9,29 @@ import numpy as np
 from scipy.signal import find_peaks
 
 
+def compare_base_span(clean, filtered, valid):
+    """Signed robust amplitude-span change on identical quality-valid timestamps."""
+    clean = np.asarray(clean, dtype=float)
+    filtered = np.asarray(filtered, dtype=float)
+    valid = np.asarray(valid, dtype=bool)
+    if clean.shape != filtered.shape or clean.shape != valid.shape or clean.ndim != 1:
+        raise ValueError('Signals and mask must be one-dimensional arrays of equal length')
+    selected = valid & np.isfinite(clean) & np.isfinite(filtered)
+    count = int(selected.sum())
+    clean_span = float(np.ptp(np.percentile(clean[selected], [5, 95]))) if count else None
+    filtered_span = float(np.ptp(np.percentile(filtered[selected], [5, 95]))) if count else None
+    change = 100 * (filtered_span / clean_span - 1) if clean_span and clean_span > 0 else None
+    return {'scored_points': count, 'clean_span': clean_span, 'filtered_span': filtered_span,
+            'change_percent': change}
+
+
+def summarize_base_span(runs):
+    values = [r['change_percent'] for r in runs if r['change_percent'] is not None]
+    return {'change_percent': float(np.mean(values)) if values else None,
+            'scored_runs': len(values), 'total_runs': len(runs),
+            'scored_points': sum(r['scored_points'] for r in runs if r['change_percent'] is not None)}
+
+
 def reference_labels(clean, bounds, bins_per_half=5):
     clean = np.asarray(clean, dtype=float)
     peak = find_peaks(clean)[0]

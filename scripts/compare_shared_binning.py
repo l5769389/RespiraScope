@@ -16,7 +16,8 @@ from ct_breath.config import AppConfig
 from ct_breath.mock_sensor.breath_simulator import SCENARIO_PRESETS, BreathWaveform
 from ct_breath.breath_process.respiratory_bins import build_respiratory_bins
 from raw_comparison_metrics import compare_to_raw, summarize_raw_comparison
-from reference_binning_metrics import reference_labels, compare_reference, summarize_reference
+from reference_binning_metrics import (reference_labels, compare_reference, summarize_reference,
+                                      compare_base_span, summarize_base_span)
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT/'docs/measurements/shared_binning'
@@ -117,6 +118,7 @@ def main():
                  'raw_comparison':compare_to_raw(np.asarray(raw)[START:STOP,1],filtered,valid,FS,cfg.bpm)}
             reference = {key: value[START:STOP] for key, value in reference_labels(truth, bounds).items()}
             per['reference_comparison'] = compare_reference(labels, reference, valid)
+            per['base_span_comparison'] = compare_base_span(clean, filtered, valid)
             for mode in MODES:
                 per['modes'][mode]={'coverage':float(np.mean(labels[mode]>=0)*100),
                     'occupied_bins':int(len(set(labels[mode]) - {-1})),
@@ -136,6 +138,7 @@ def main():
              'filter_scored_points':len(e),'identical_filter_results':True,'modes':{},'seeds':samples}
         row['raw_comparison']=summarize_raw_comparison([s['raw_comparison'] for s in samples])
         row['reference_comparison']=summarize_reference([s['reference_comparison'] for s in samples])
+        row['base_span_comparison']=summarize_base_span([s['base_span_comparison'] for s in samples])
         for mode in MODES:
             spread=[s['modes'][mode]['spread'] for s in samples if s['modes'][mode]['spread'] is not None]
             row['modes'][mode]={'coverage':float(np.mean([s['modes'][mode]['coverage'] for s in samples])),
@@ -168,9 +171,15 @@ def main():
         'reference': 'Sampled local extrema of the full analytic noise/artifact-free waveform, detected independently by scipy.signal.find_peaks with no smoothing or thresholds. Includes baseline drift and preset amplitude modulation. Never uses production extrema or build_respiratory_bins.',
         'time': 'Split each clean reference extremum-to-opposite-extremum half-breath into five equal time parts; rising=inhale. Reference unavailable outside complete reference halves.',
         'fixed': 'Classify the clean value directly into five equal amplitude bands using the SAME per-run app bounds; add clean reference direction. Clean value outside bounds has label -1 and counts as mismatch if actual fixed assigned a bin.',
-        'population': 'Exactly the same quality-valid samples assigned by both actual modes and inside a reference half-breath. No reference amplitude-in-range restriction. Denominator and number of contributing runs are always reported.',
+        'population': 'Exactly the same quality-valid samples assigned by both actual modes and inside a reference half-breath. No reference amplitude-in-range restriction. Denominator and number of contributing runs are retained in measurement JSON.',
         'mismatch': 'Actual direction/bin differs from its own method reference direction/bin, or actual fixed assigns a bin outside the clean reference amplitude range. Pooled counts over 20 runs, percent of scored samples.',
         'limitations': 'Compares agreement with each method own reference, not common physiological target or CT quality. Does not score unassigned samples as correct. Synthetic apnea/weakening retain 8 percent oscillation; reference labels here do not establish clinical apnea detection.'}
+    payload['definitions']['base_span_comparison']={
+        'reference': 'Analytic noise/artifact-free base signal, including configured baseline drift and amplitude modulation; no production filtering applied.',
+        'population': 'Identical finite quality-valid timestamps in each 60-second record for clean and filtered signals, independent of bin assignment. Excluded artifact intervals are not scored.',
+        'span': '95th percentile minus 5th percentile (numpy linear interpolation) of sample values; not a mean per-cycle peak-to-trough amplitude.',
+        'change': '100 * (filtered span / clean span - 1). Negative means narrower; positive means wider. Arithmetic mean of available per-run changes over 20 runs. Empty or zero reference span returns null.',
+        'limitations': 'Shared filtering yields identical results for both binning modes. This measures amplitude-span change, not pointwise waveform accuracy or baseline offset; positive and negative changes across runs can cancel.'}
     (OUT/'metrics.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2,allow_nan=False))
 
 if __name__=='__main__':main()

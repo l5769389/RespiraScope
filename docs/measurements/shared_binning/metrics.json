@@ -54,15 +54,22 @@
       "reference": "Sampled local extrema of the full analytic noise/artifact-free waveform, detected independently by scipy.signal.find_peaks with no smoothing or thresholds. Includes baseline drift and preset amplitude modulation. Never uses production extrema or build_respiratory_bins.",
       "time": "Split each clean reference extremum-to-opposite-extremum half-breath into five equal time parts; rising=inhale. Reference unavailable outside complete reference halves.",
       "fixed": "Classify the clean value directly into five equal amplitude bands using the SAME per-run app bounds; add clean reference direction. Clean value outside bounds has label -1 and counts as mismatch if actual fixed assigned a bin.",
-      "population": "Exactly the same quality-valid samples assigned by both actual modes and inside a reference half-breath. No reference amplitude-in-range restriction. Denominator and number of contributing runs are always reported.",
+      "population": "Exactly the same quality-valid samples assigned by both actual modes and inside a reference half-breath. No reference amplitude-in-range restriction. Denominator and number of contributing runs are retained in measurement JSON.",
       "mismatch": "Actual direction/bin differs from its own method reference direction/bin, or actual fixed assigns a bin outside the clean reference amplitude range. Pooled counts over 20 runs, percent of scored samples.",
       "limitations": "Compares agreement with each method own reference, not common physiological target or CT quality. Does not score unassigned samples as correct. Synthetic apnea/weakening retain 8 percent oscillation; reference labels here do not establish clinical apnea detection."
+    },
+    "base_span_comparison": {
+      "reference": "Analytic noise/artifact-free base signal, including configured baseline drift and amplitude modulation; no production filtering applied.",
+      "population": "Identical finite quality-valid timestamps in each 60-second record for clean and filtered signals, independent of bin assignment. Excluded artifact intervals are not scored.",
+      "span": "95th percentile minus 5th percentile (numpy linear interpolation) of sample values; not a mean per-cycle peak-to-trough amplitude.",
+      "change": "100 * (filtered span / clean span - 1). Negative means narrower; positive means wider. Arithmetic mean of available per-run changes over 20 runs. Empty or zero reference span returns null.",
+      "limitations": "Shared filtering yields identical results for both binning modes. This measures amplitude-span change, not pointwise waveform accuracy or baseline offset; positive and negative changes across runs can cancel."
     }
   },
   "source_sha256": {
-    "scripts/compare_shared_binning.py": "4f9d6a91feb4cb39abb759d82c6be274025acaf4738cb7227e6f8ec98c954efe",
+    "scripts/compare_shared_binning.py": "3c9ed4a7c3a5d9cf53be26110efefcef1fe14bb5424734bd73b5b43ff5bf4874",
     "scripts/raw_comparison_metrics.py": "ecb1074233602fbd1d9eec9776013434a42d480df919227e735e490fd275625f",
-    "scripts/reference_binning_metrics.py": "da7e6ceef2b61f6902016b11ac6cc98b4a6b7b63564c0fe02d5364480aed9b09",
+    "scripts/reference_binning_metrics.py": "2cdefc3312f066d5f69d8416f2b8f0400c63733f9e6ad439aeebe06f6982ba43",
     "src/ct_breath/breath_process/filter_context.py": "d35e359de35694bfddd42450ab6be3742f6b7c04fdf7dc76da5c55617d96dfcd",
     "src/ct_breath/breath_process/offline_quality.py": "5f605f6d35f1e2db049a67efe85dae37f9ad18647324f89aa0d82d6f74bd322e",
     "src/ct_breath/breath_process/peak_valley_detector.py": "6c09abb72a2351b37726dd35fdbe7b966319d868aecdb9c82d2ace3e2c731788",
@@ -163,6 +170,12 @@
                 "mismatch_percent": 1.817507418397626
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.305,
+            "change_percent": 0.010172046261858192
           }
         },
         {
@@ -212,6 +225,12 @@
                 "mismatch_percent": 1.8161601186063752
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.31,
+            "change_percent": 0.012914981783285207
           }
         },
         {
@@ -261,6 +280,12 @@
                 "mismatch_percent": 2.5583982202447166
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 181.7,
+            "change_percent": -0.32172315182918965
           }
         },
         {
@@ -310,6 +335,12 @@
                 "mismatch_percent": 2.259259259259259
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.7,
+            "change_percent": 0.22686395245352653
           }
         },
         {
@@ -359,6 +390,12 @@
                 "mismatch_percent": 1.9636902556502407
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.50499999999997,
+            "change_percent": 0.11988946711838366
           }
         },
         {
@@ -408,6 +445,12 @@
                 "mismatch_percent": 1.8874907475943745
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.7,
+            "change_percent": 0.22686395245352653
           }
         },
         {
@@ -457,6 +500,12 @@
                 "mismatch_percent": 2.6267110617832037
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.00499999999997,
+            "change_percent": -0.15440408502297442
           }
         },
         {
@@ -506,6 +555,12 @@
                 "mismatch_percent": 2.2600963319748058
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.40000000000003,
+            "change_percent": 0.062287821168749424
           }
         },
         {
@@ -555,6 +610,12 @@
                 "mismatch_percent": 2.8137726767863755
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 181.80499999999998,
+            "change_percent": -0.264121505879511
           }
         },
         {
@@ -604,6 +665,12 @@
                 "mismatch_percent": 2.223045572434235
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.20000000000002,
+            "change_percent": -0.047429599687809354
           }
         },
         {
@@ -653,6 +720,12 @@
                 "mismatch_percent": 1.7420311341734618
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.40000000000003,
+            "change_percent": 0.062287821168749424
           }
         },
         {
@@ -702,6 +775,12 @@
                 "mismatch_percent": 2.2962962962962963
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.00500000000002,
+            "change_percent": -0.15440408502294112
           }
         },
         {
@@ -751,6 +830,12 @@
                 "mismatch_percent": 1.8902891030392883
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.7,
+            "change_percent": 0.22686395245352653
           }
         },
         {
@@ -800,6 +885,12 @@
                 "mismatch_percent": 2.293747687754347
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.005,
+            "change_percent": -0.15440408502295222
           }
         },
         {
@@ -849,6 +940,12 @@
                 "mismatch_percent": 2.4796447076239825
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.005,
+            "change_percent": -0.15440408502295222
           }
         },
         {
@@ -898,6 +995,12 @@
                 "mismatch_percent": 1.8134715025906734
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.50000000000003,
+            "change_percent": 0.11714653159700106
           }
         },
         {
@@ -947,6 +1050,12 @@
                 "mismatch_percent": 2.223045572434235
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.10999999999996,
+            "change_percent": -0.09680243907329578
           }
         },
         {
@@ -996,6 +1105,12 @@
                 "mismatch_percent": 2.1505376344086025
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.2,
+            "change_percent": -0.04742959968783156
           }
         },
         {
@@ -1045,6 +1160,12 @@
                 "mismatch_percent": 1.6320474777448073
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.6,
+            "change_percent": 0.1720052420252527
           }
         },
         {
@@ -1094,6 +1215,12 @@
                 "mismatch_percent": 2.037037037037037
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 182.28645773718986,
+            "filtered_span": 182.10500000000002,
+            "change_percent": -0.09954537459466728
           }
         }
       ],
@@ -1122,6 +1249,12 @@
             "mismatch_percent": 2.139324677249069
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.012868612118013267,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -1217,6 +1350,12 @@
                 "mismatch_percent": 4.215976331360947
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.605,
+            "change_percent": -0.11068239479737896
           }
         },
         {
@@ -1266,6 +1405,12 @@
                 "mismatch_percent": 4.631344942571323
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.6,
+            "change_percent": -0.11469063353601872
           }
         },
         {
@@ -1315,6 +1460,12 @@
                 "mismatch_percent": 4.557243423490181
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.89999999999999,
+            "change_percent": 0.12580369078132314
           }
         },
         {
@@ -1364,6 +1515,12 @@
                 "mismatch_percent": 4.334938866246758
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 125.00499999999997,
+            "change_percent": 0.20997670429236948
           }
         },
         {
@@ -1413,6 +1570,12 @@
                 "mismatch_percent": 4.219096965210955
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.60499999999999,
+            "change_percent": -0.11068239479739006
           }
         },
         {
@@ -1462,6 +1625,12 @@
                 "mismatch_percent": 4.447739065974797
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.80999999999995,
+            "change_percent": 0.053655393486073955
           }
         },
         {
@@ -1511,6 +1680,12 @@
                 "mismatch_percent": 3.967371153133111
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 125.00499999999998,
+            "change_percent": 0.20997670429236948
           }
         },
         {
@@ -1560,6 +1735,12 @@
                 "mismatch_percent": 4.513503514613393
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.205,
+            "change_percent": -0.4313414938871607
           }
         },
         {
@@ -1609,6 +1790,12 @@
                 "mismatch_percent": 5.070318282753516
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.70500000000001,
+            "change_percent": -0.030517620024939074
           }
         },
         {
@@ -1658,6 +1845,12 @@
                 "mismatch_percent": 5.405405405405405
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 123.9,
+            "change_percent": -0.675844056943109
           }
         },
         {
@@ -1707,6 +1900,12 @@
                 "mismatch_percent": 4.601113172541744
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.90499999999996,
+            "change_percent": 0.1298119295199074
           }
         },
         {
@@ -1756,6 +1955,12 @@
                 "mismatch_percent": 3.9985190670122175
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.99999999999999,
+            "change_percent": 0.20596846555374082
           }
         },
         {
@@ -1805,6 +2010,12 @@
                 "mismatch_percent": 3.851851851851852
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 125.5,
+            "change_percent": 0.6067923394159846
           }
         },
         {
@@ -1854,6 +2065,12 @@
                 "mismatch_percent": 4.37037037037037
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.89999999999999,
+            "change_percent": 0.12580369078132314
           }
         },
         {
@@ -1903,6 +2120,12 @@
                 "mismatch_percent": 4.742497221193035
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.30999999999996,
+            "change_percent": -0.34716848037612547
           }
         },
         {
@@ -1952,6 +2175,12 @@
                 "mismatch_percent": 4.191394658753709
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.70499999999996,
+            "change_percent": -0.030517620024983483
           }
         },
         {
@@ -2001,6 +2230,12 @@
                 "mismatch_percent": 3.850425768233987
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 125.2,
+            "change_percent": 0.3662980150986428
           }
         },
         {
@@ -2050,6 +2285,12 @@
                 "mismatch_percent": 5.077835433654559
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.0,
+            "change_percent": -0.5956792821706691
           }
         },
         {
@@ -2099,6 +2340,12 @@
                 "mismatch_percent": 4.035542391706775
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.70499999999998,
+            "change_percent": -0.03051762002496128
           }
         },
         {
@@ -2148,6 +2395,12 @@
                 "mismatch_percent": 4.10958904109589
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 124.74306861568759,
+            "filtered_span": 124.30499999999999,
+            "change_percent": -0.3511767191147208
           }
         }
       ],
@@ -2176,6 +2429,12 @@
             "mismatch_percent": 4.4095858952515
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.03973656912378609,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -2271,6 +2530,12 @@
                 "mismatch_percent": 1.148573545757688
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.9,
+            "change_percent": 0.2545897708922995
           }
         },
         {
@@ -2320,6 +2585,12 @@
                 "mismatch_percent": 1.3323464100666174
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.29999999999998,
+            "change_percent": -0.01406924591225156
           }
         },
         {
@@ -2369,6 +2640,12 @@
                 "mismatch_percent": 0.8888888888888888
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.40000000000003,
+            "change_percent": 0.030707256888518053
           }
         },
         {
@@ -2418,6 +2695,12 @@
                 "mismatch_percent": 0.7039644312708411
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.89999999999998,
+            "change_percent": 0.2545897708922773
           }
         },
         {
@@ -2467,6 +2750,12 @@
                 "mismatch_percent": 1.4444444444444444
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.5,
+            "change_percent": 0.07548375968926546
           }
         },
         {
@@ -2516,6 +2805,12 @@
                 "mismatch_percent": 1.2967765839199703
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.80499999999998,
+            "change_percent": 0.21205209323156282
           }
         },
         {
@@ -2565,6 +2860,12 @@
                 "mismatch_percent": 1.3343217197924389
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.00000000000003,
+            "change_percent": -0.1483987543145049
           }
         },
         {
@@ -2614,6 +2915,12 @@
                 "mismatch_percent": 1.371894697812384
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.60000000000002,
+            "change_percent": 0.12026026249003507
           }
         },
         {
@@ -2663,6 +2970,12 @@
                 "mismatch_percent": 1.0003705075954057
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.7,
+            "change_percent": 0.16503676529078248
           }
         },
         {
@@ -2712,6 +3025,12 @@
                 "mismatch_percent": 1.0347376201034737
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.89999999999998,
+            "change_percent": 0.2545897708922773
           }
         },
         {
@@ -2761,6 +3080,12 @@
                 "mismatch_percent": 1.927353595255745
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 222.90499999999997,
+            "change_percent": -0.19093643197524157
           }
         },
         {
@@ -2810,6 +3135,12 @@
                 "mismatch_percent": 1.7043349388662465
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.005,
+            "change_percent": -0.14615992917448306
           }
         },
         {
@@ -2859,6 +3190,12 @@
                 "mismatch_percent": 1.6654330125832717
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.20999999999998,
+            "change_percent": -0.05436809843293311
           }
         },
         {
@@ -2908,6 +3245,12 @@
                 "mismatch_percent": 1.1481481481481481
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.6,
+            "change_percent": 0.12026026249001287
           }
         },
         {
@@ -2957,6 +3300,12 @@
                 "mismatch_percent": 1.5925925925925926
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.6,
+            "change_percent": 0.12026026249001287
           }
         },
         {
@@ -3006,6 +3355,12 @@
                 "mismatch_percent": 1.77449168207024
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.2,
+            "change_percent": -0.05884574871301007
           }
         },
         {
@@ -3055,6 +3410,12 @@
                 "mismatch_percent": 1.3318534961154271
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.50500000000002,
+            "change_percent": 0.0777225848293206
           }
         },
         {
@@ -3104,6 +3465,12 @@
                 "mismatch_percent": 1.4820303816228233
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.29999999999998,
+            "change_percent": -0.01406924591225156
           }
         },
         {
@@ -3153,6 +3520,12 @@
                 "mismatch_percent": 1.5179563124768602
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.10000000000002,
+            "change_percent": -0.10362225151374638
           }
         },
         {
@@ -3202,6 +3575,12 @@
                 "mismatch_percent": 1.2592592592592593
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 223.3314210468264,
+            "filtered_span": 223.5,
+            "change_percent": 0.07548375968926546
           }
         }
       ],
@@ -3230,6 +3609,12 @@
             "mismatch_percent": 1.3479983705514202
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.05152833069086038,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -3325,6 +3710,12 @@
                 "mismatch_percent": 8.330248056275453
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.905,
+            "change_percent": 0.615431668918287
           }
         },
         {
@@ -3374,6 +3765,12 @@
                 "mismatch_percent": 8.808290155440414
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.405,
+            "change_percent": -0.21057138230015093
           }
         },
         {
@@ -3423,6 +3820,12 @@
                 "mismatch_percent": 9.807549962990377
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.5,
+            "change_percent": -0.05363080256864938
           }
         },
         {
@@ -3472,6 +3875,12 @@
                 "mismatch_percent": 10.604375231738969
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.099999999999994,
+            "change_percent": -0.7144332435434109
           }
         },
         {
@@ -3521,6 +3930,12 @@
                 "mismatch_percent": 9.48499444238607
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.40499999999997,
+            "change_percent": -0.21057138230019534
           }
         },
         {
@@ -3570,6 +3985,12 @@
                 "mismatch_percent": 10.044477390659749
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.400000000000006,
+            "change_percent": -0.21883141281232588
           }
         },
         {
@@ -3619,6 +4040,12 @@
                 "mismatch_percent": 9.689349112426035
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.704999999999984,
+            "change_percent": 0.28503044843088965
           }
         },
         {
@@ -3668,6 +4095,12 @@
                 "mismatch_percent": 10.122358175750835
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.905,
+            "change_percent": 0.615431668918287
           }
         },
         {
@@ -3717,6 +4150,12 @@
                 "mismatch_percent": 9.599703484062267
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 61.5,
+            "change_percent": 1.5983752998682377
           }
         },
         {
@@ -3766,6 +4205,12 @@
                 "mismatch_percent": 10.18895887365691
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.10999999999996,
+            "change_percent": -0.6979131825191054
           }
         },
         {
@@ -3815,6 +4260,12 @@
                 "mismatch_percent": 9.463955637707947
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 61.19999999999999,
+            "change_percent": 1.1027734691371638
           }
         },
         {
@@ -3864,6 +4315,12 @@
                 "mismatch_percent": 8.59896219421794
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 61.70000000000002,
+            "change_percent": 1.928776520355635
           }
         },
         {
@@ -3913,6 +4370,12 @@
                 "mismatch_percent": 9.592592592592593
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.904999999999944,
+            "change_percent": 0.6154316689181982
           }
         },
         {
@@ -3962,6 +4425,12 @@
                 "mismatch_percent": 10.666666666666668
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.69999999999999,
+            "change_percent": 0.2767704179187147
           }
         },
         {
@@ -4011,6 +4480,12 @@
                 "mismatch_percent": 10.292484265087005
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.60499999999999,
+            "change_percent": 0.11982983818721316
           }
         },
         {
@@ -4060,6 +4535,12 @@
                 "mismatch_percent": 10.255460940392446
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.19999999999999,
+            "change_percent": -0.5492326332997344
           }
         },
         {
@@ -4109,6 +4590,12 @@
                 "mismatch_percent": 9.559095961467209
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.30000000000001,
+            "change_percent": -0.38403202305600237
           }
         },
         {
@@ -4158,6 +4645,12 @@
                 "mismatch_percent": 9.080800593031874
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.599999999999994,
+            "change_percent": 0.11156980767503821
           }
         },
         {
@@ -4207,6 +4700,12 @@
                 "mismatch_percent": 8.512213175425611
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 61.20000000000002,
+            "change_percent": 1.1027734691372082
           }
         },
         {
@@ -4256,6 +4755,12 @@
                 "mismatch_percent": 10.25925925925926
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 60.5324640462826,
+            "filtered_span": 60.599999999999994,
+            "change_percent": 0.11156980767503821
           }
         }
       ],
@@ -4284,6 +4789,12 @@
             "mismatch_percent": 9.647969482046628
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.2722274011370168,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -4379,6 +4890,12 @@
                 "mismatch_percent": 4.0325564187939325
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.005,
+            "change_percent": -0.41517271703650493
           }
         },
         {
@@ -4428,6 +4945,12 @@
                 "mismatch_percent": 3.038162282326788
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.90999999999997,
+            "change_percent": 0.10276796680062095
           }
         },
         {
@@ -4477,6 +5000,12 @@
                 "mismatch_percent": 4.080118694362018
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 173.40500000000003,
+            "change_percent": -0.7585588057682946
           }
         },
         {
@@ -4526,6 +5055,12 @@
                 "mismatch_percent": 4.336545589325426
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.10499999999996,
+            "change_percent": -0.3579417022478881
           }
         },
         {
@@ -4575,6 +5110,12 @@
                 "mismatch_percent": 3.1423290203327174
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.905,
+            "change_percent": 0.09990641606121287
           }
         },
         {
@@ -4624,6 +5165,12 @@
                 "mismatch_percent": 4.182087342709105
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.39999999999998,
+            "change_percent": -0.18911020862141248
           }
         },
         {
@@ -4673,6 +5220,12 @@
                 "mismatch_percent": 3.1458179126572907
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.00499999999997,
+            "change_percent": 0.15713743084981857
           }
         },
         {
@@ -4722,6 +5275,12 @@
                 "mismatch_percent": 4.035542391706775
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 173.1,
+            "change_percent": -0.933113400873653
           }
         },
         {
@@ -4771,6 +5330,12 @@
                 "mismatch_percent": 2.9944547134935307
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.205,
+            "change_percent": 0.2715994604271188
           }
         },
         {
@@ -4820,6 +5385,12 @@
                 "mismatch_percent": 2.7037037037037037
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.70499999999998,
+            "change_percent": -0.014555613516065158
           }
         },
         {
@@ -4869,6 +5440,12 @@
                 "mismatch_percent": 3.1504818383988136
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.30499999999998,
+            "change_percent": 0.3288304752157245
           }
         },
         {
@@ -4918,6 +5495,12 @@
                 "mismatch_percent": 3.40993328391401
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.00499999999997,
+            "change_percent": 0.15713743084981857
           }
         },
         {
@@ -4967,6 +5550,12 @@
                 "mismatch_percent": 3.3011869436201784
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.09999999999997,
+            "change_percent": 0.2115068948990162
           }
         },
         {
@@ -5016,6 +5605,12 @@
                 "mismatch_percent": 4.005934718100891
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.9,
+            "change_percent": 0.6693550132081283
           }
         },
         {
@@ -5065,6 +5660,12 @@
                 "mismatch_percent": 4.148148148148148
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.29999999999998,
+            "change_percent": -0.2463412234100404
           }
         },
         {
@@ -5114,6 +5715,12 @@
                 "mismatch_percent": 3.114571746384872
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.50500000000002,
+            "change_percent": -0.12901764309332098
           }
         },
         {
@@ -5163,6 +5770,12 @@
                 "mismatch_percent": 3.967371153133111
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 173.6,
+            "change_percent": -0.6469583269304802
           }
         },
         {
@@ -5212,6 +5825,12 @@
                 "mismatch_percent": 4.189840563589174
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 173.80499999999998,
+            "change_percent": -0.529634746613783
           }
         },
         {
@@ -5261,6 +5880,12 @@
                 "mismatch_percent": 2.924842650870048
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 175.10999999999999,
+            "change_percent": 0.21722999637789897
           }
         },
         {
@@ -5310,6 +5935,12 @@
                 "mismatch_percent": 3.1875463306152705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 174.73043308653502,
+            "filtered_span": 174.60000000000002,
+            "change_percent": -0.07464817904411225
           }
         }
       ],
@@ -5338,6 +5969,12 @@
             "mismatch_percent": 3.5544277538017
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.10397907412330987,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -5433,6 +6070,12 @@
                 "mismatch_percent": 10.588670862643465
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 171.505,
+            "change_percent": 0.40813536216546265
           }
         },
         {
@@ -5482,6 +6125,12 @@
                 "mismatch_percent": 11.152278621711744
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.8,
+            "change_percent": -0.004609079281281403
           }
         },
         {
@@ -5531,6 +6180,12 @@
                 "mismatch_percent": 11.0
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.805,
+            "change_percent": -0.0016818137391072518
           }
         },
         {
@@ -5580,6 +6235,12 @@
                 "mismatch_percent": 11.11934766493699
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 171.10499999999996,
+            "change_percent": 0.17395411879139733
           }
         },
         {
@@ -5629,6 +6290,12 @@
                 "mismatch_percent": 11.115227862171174
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.3,
+            "change_percent": -0.29733563349884085
           }
         },
         {
@@ -5678,6 +6345,12 @@
                 "mismatch_percent": 11.658031088082902
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 169.89999999999998,
+            "change_percent": -0.5315168768729173
           }
         },
         {
@@ -5727,6 +6400,12 @@
                 "mismatch_percent": 11.29211403184006
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.49999999999997,
+            "change_percent": -0.1802450118118415
           }
         },
         {
@@ -5776,6 +6455,12 @@
                 "mismatch_percent": 10.888888888888888
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 171.01,
+            "change_percent": 0.11833607349007735
           }
         },
         {
@@ -5825,6 +6510,12 @@
                 "mismatch_percent": 11.851851851851853
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 171.29999999999998,
+            "change_percent": 0.28811747493626694
           }
         },
         {
@@ -5874,6 +6565,12 @@
                 "mismatch_percent": 10.84783413550537
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.90499999999997,
+            "change_percent": 0.05686349710438687
           }
         },
         {
@@ -5923,6 +6620,12 @@
                 "mismatch_percent": 10.9959274342836
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.90499999999997,
+            "change_percent": 0.05686349710438687
           }
         },
         {
@@ -5972,6 +6675,12 @@
                 "mismatch_percent": 12.814814814814815
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.505,
+            "change_percent": -0.17731774626965624
           }
         },
         {
@@ -6021,6 +6730,12 @@
                 "mismatch_percent": 10.489251297257228
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.89999999999998,
+            "change_percent": 0.05393623156220162
           }
         },
         {
@@ -6070,6 +6785,12 @@
                 "mismatch_percent": 11.869436201780417
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.2,
+            "change_percent": -0.3558809443423683
           }
         },
         {
@@ -6119,6 +6840,12 @@
                 "mismatch_percent": 11.324944485566247
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.70499999999998,
+            "change_percent": -0.060227124582634683
           }
         },
         {
@@ -6168,6 +6895,12 @@
                 "mismatch_percent": 10.967024824008892
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.8,
+            "change_percent": -0.004609079281281403
           }
         },
         {
@@ -6217,6 +6950,12 @@
                 "mismatch_percent": 10.934025203854707
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.20499999999998,
+            "change_percent": -0.3529536788001941
           }
         },
         {
@@ -6266,6 +7005,12 @@
                 "mismatch_percent": 12.648367952522255
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.70000000000002,
+            "change_percent": -0.06315439012479773
           }
         },
         {
@@ -6315,6 +7060,12 @@
                 "mismatch_percent": 11.25925925925926
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.01,
+            "change_percent": -0.46711703494504153
           }
         },
         {
@@ -6364,6 +7115,12 @@
                 "mismatch_percent": 11.230541141586361
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 170.80787267027006,
+            "filtered_span": 170.40999999999997,
+            "change_percent": -0.23293579157100952
           }
         }
       ],
@@ -6392,6 +7149,12 @@
             "mismatch_percent": 11.302302320843134
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.07866889749833961,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -6487,6 +7250,12 @@
                 "mismatch_percent": 12.490733876945887
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 163.005,
+            "change_percent": 2.064919283670852
           }
         },
         {
@@ -6536,6 +7305,12 @@
                 "mismatch_percent": 13.597628751389404
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 160.30499999999998,
+            "change_percent": 0.37432524013898405
           }
         },
         {
@@ -6585,6 +7360,12 @@
                 "mismatch_percent": 11.967395331604298
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 162.6,
+            "change_percent": 1.8113301771410795
           }
         },
         {
@@ -6634,6 +7415,12 @@
                 "mismatch_percent": 12.425816023738873
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 162.90999999999997,
+            "change_percent": 2.0054354191761936
           }
         },
         {
@@ -6683,6 +7470,12 @@
                 "mismatch_percent": 11.082283172720533
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 161.79999999999998,
+            "change_percent": 1.3104134235019993
           }
         },
         {
@@ -6732,6 +7525,12 @@
                 "mismatch_percent": 11.670989255279734
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 162.2,
+            "change_percent": 1.5608718003215394
           }
         },
         {
@@ -6781,6 +7580,12 @@
                 "mismatch_percent": 12.083024462564863
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 159.60000000000002,
+            "change_percent": -0.06710764900541566
           }
         },
         {
@@ -6830,6 +7635,12 @@
                 "mismatch_percent": 15.85772508336421
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 160.51,
+            "change_percent": 0.5026851582589975
           }
         },
         {
@@ -6879,6 +7690,12 @@
                 "mismatch_percent": 12.272895810159437
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 161.8,
+            "change_percent": 1.3104134235020215
           }
         },
         {
@@ -6928,6 +7745,12 @@
                 "mismatch_percent": 14.280429152793191
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 157.30499999999998,
+            "change_percent": -1.5041125860075333
           }
         },
         {
@@ -6977,6 +7800,12 @@
                 "mismatch_percent": 12.833827893175073
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 161.505,
+            "change_percent": 1.1257003705976043
           }
         },
         {
@@ -7026,6 +7855,12 @@
                 "mismatch_percent": 13.190070396443126
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 160.10000000000002,
+            "change_percent": 0.2459653220189928
           }
         },
         {
@@ -7075,6 +7910,12 @@
                 "mismatch_percent": 11.89770200148258
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 164.4,
+            "change_percent": 2.9383928728289987
           }
         },
         {
@@ -7124,6 +7965,12 @@
                 "mismatch_percent": 14.227491663579103
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 157.59999999999997,
+            "change_percent": -1.3193995331031272
           }
         },
         {
@@ -7173,6 +8020,12 @@
                 "mismatch_percent": 15.504451038575667
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 158.80999999999997,
+            "change_percent": -0.5617629432240312
           }
         },
         {
@@ -7222,6 +8075,12 @@
                 "mismatch_percent": 13.360473723168024
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 161.005,
+            "change_percent": 0.8126273995731736
           }
         },
         {
@@ -7271,6 +8130,12 @@
                 "mismatch_percent": 13.148148148148147
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 158.99999999999997,
+            "change_percent": -0.442795214234748
           }
         },
         {
@@ -7320,6 +8185,12 @@
                 "mismatch_percent": 10.979228486646884
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 159.40499999999997,
+            "change_percent": -0.1892061077049756
           }
         },
         {
@@ -7369,6 +8240,12 @@
                 "mismatch_percent": 10.715609936967
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 161.905,
+            "change_percent": 1.3761587474171444
           }
         },
         {
@@ -7418,6 +8295,12 @@
                 "mismatch_percent": 14.000000000000002
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 159.707175730926,
+            "filtered_span": 158.50500000000002,
+            "change_percent": -0.7527374555488908
           }
         }
       ],
@@ -7446,6 +8329,12 @@
             "mismatch_percent": 12.879616075895422
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.6301058574659429,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -7541,6 +8430,12 @@
                 "mismatch_percent": 8.695652173913043
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2137,
+            "clean_span": 181.87203601469594,
+            "filtered_span": 182.42000000000002,
+            "change_percent": 0.3012909501160399
           }
         },
         {
@@ -7590,6 +8485,12 @@
                 "mismatch_percent": 3.6363636363636362
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2174,
+            "clean_span": 181.6546310483635,
+            "filtered_span": 182.90499999999997,
+            "change_percent": 0.6883220892417441
           }
         },
         {
@@ -7639,6 +8540,12 @@
                 "mismatch_percent": 14.775413711583923
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2300,
+            "clean_span": 183.57015276987562,
+            "filtered_span": 186.71499999999997,
+            "change_percent": 1.7131582573049142
           }
         },
         {
@@ -7688,6 +8595,12 @@
                 "mismatch_percent": 6.25
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1995,
+            "clean_span": 181.04984331178787,
+            "filtered_span": 181.23000000000002,
+            "change_percent": 0.09950667999303331
           }
         },
         {
@@ -7737,6 +8650,12 @@
                 "mismatch_percent": 9.113607990012484
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1882,
+            "clean_span": 179.80076150792627,
+            "filtered_span": 182.38000000000002,
+            "change_percent": 1.4344980913554517
           }
         },
         {
@@ -7786,6 +8705,12 @@
                 "mismatch_percent": 8.88888888888889
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2095,
+            "clean_span": 179.35998878521232,
+            "filtered_span": 179.43,
+            "change_percent": 0.03903390899044901
           }
         },
         {
@@ -7835,6 +8760,12 @@
                 "mismatch_percent": 12.681912681912683
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2277,
+            "clean_span": 178.83229725419758,
+            "filtered_span": 178.94,
+            "change_percent": 0.06022555626477022
           }
         },
         {
@@ -7884,6 +8815,12 @@
                 "mismatch_percent": 6.527651858567543
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2358,
+            "clean_span": 176.33330683792354,
+            "filtered_span": 181.04500000000002,
+            "change_percent": 2.6720381115560965
           }
         },
         {
@@ -7933,6 +8870,12 @@
                 "mismatch_percent": 4.201680672268908
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1813,
+            "clean_span": 178.46964466472892,
+            "filtered_span": 179.14000000000001,
+            "change_percent": 0.37561308340721133
           }
         },
         {
@@ -7982,6 +8925,12 @@
                 "mismatch_percent": 7.142857142857142
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1020,
+            "clean_span": 179.5152899008524,
+            "filtered_span": 182.305,
+            "change_percent": 1.5540236715704703
           }
         },
         {
@@ -8031,6 +8980,12 @@
                 "mismatch_percent": 8.037383177570094
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2001,
+            "clean_span": 179.3356655081384,
+            "filtered_span": 180.40000000000003,
+            "change_percent": 0.59348735169098
           }
         },
         {
@@ -8080,6 +9035,12 @@
                 "mismatch_percent": 8.51449275362319
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1859,
+            "clean_span": 177.76625405838337,
+            "filtered_span": 176.00999999999996,
+            "change_percent": -0.9879569481205386
           }
         },
         {
@@ -8129,6 +9090,12 @@
                 "mismatch_percent": 10.10928961748634
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1915,
+            "clean_span": 176.36038134038927,
+            "filtered_span": 176.65999999999997,
+            "change_percent": 0.1698900043952678
           }
         },
         {
@@ -8178,6 +9145,12 @@
                 "mismatch_percent": 3.6105032822757113
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2162,
+            "clean_span": 178.54577408747093,
+            "filtered_span": 177.98999999999998,
+            "change_percent": -0.3112782088018906
           }
         },
         {
@@ -8227,6 +9200,12 @@
                 "mismatch_percent": 9.190371991247265
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1959,
+            "clean_span": 176.51984838094234,
+            "filtered_span": 177.8,
+            "change_percent": 0.7252168131795633
           }
         },
         {
@@ -8276,6 +9255,12 @@
                 "mismatch_percent": 5.0477489768076405
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1927,
+            "clean_span": 179.71399816953135,
+            "filtered_span": 180.23999999999995,
+            "change_percent": 0.29268829129960316
           }
         },
         {
@@ -8325,6 +9310,12 @@
                 "mismatch_percent": 9.090909090909092
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1999,
+            "clean_span": 178.47559246940136,
+            "filtered_span": 179.51,
+            "change_percent": 0.5795792669947231
           }
         },
         {
@@ -8374,6 +9365,12 @@
                 "mismatch_percent": 8.34326579261025
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2237,
+            "clean_span": 184.48283137910488,
+            "filtered_span": 184.71999999999997,
+            "change_percent": 0.1285586409977224
           }
         },
         {
@@ -8423,6 +9420,12 @@
                 "mismatch_percent": 10.97872340425532
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2423,
+            "clean_span": 179.44003019358297,
+            "filtered_span": 180.36,
+            "change_percent": 0.5126892842274744
           }
         },
         {
@@ -8472,6 +9475,12 @@
                 "mismatch_percent": 3.481012658227848
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1758,
+            "clean_span": 180.31088785237563,
+            "filtered_span": 180.54500000000002,
+            "change_percent": 0.12983805382627
           }
         }
       ],
@@ -8500,6 +9509,12 @@
             "mismatch_percent": 8.212389380530974
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.5385211474744678,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 40291
       }
     },
     {
@@ -8595,6 +9610,12 @@
                 "mismatch_percent": 1.4814814814814816
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.81,
+            "change_percent": -0.1005854181709509
           }
         },
         {
@@ -8644,6 +9665,12 @@
                 "mismatch_percent": 1.368849426563078
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.1,
+            "change_percent": 0.002217286590178169
           }
         },
         {
@@ -8693,6 +9720,12 @@
                 "mismatch_percent": 1.629026286560533
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.59999999999997,
+            "change_percent": -0.1750287561014252
           }
         },
         {
@@ -8742,6 +9775,12 @@
                 "mismatch_percent": 1.2953367875647668
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.90500000000003,
+            "change_percent": -0.06690867005954004
           }
         },
         {
@@ -8791,6 +9830,12 @@
                 "mismatch_percent": 0.8148148148148148
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.29999999999995,
+            "change_percent": 0.07311570366679288
           }
         },
         {
@@ -8840,6 +9885,12 @@
                 "mismatch_percent": 0.9262689885142646
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.40000000000003,
+            "change_percent": 0.10856491220512243
           }
         },
         {
@@ -8889,6 +9940,12 @@
                 "mismatch_percent": 1.5168331483536812
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.0,
+            "change_percent": -0.03323192194815139
           }
         },
         {
@@ -8938,6 +9995,12 @@
                 "mismatch_percent": 1.2592592592592593
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.0,
+            "change_percent": -0.03323192194815139
           }
         },
         {
@@ -8987,6 +10050,12 @@
                 "mismatch_percent": 1.2967765839199703
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.9,
+            "change_percent": -0.06868113048646984
           }
         },
         {
@@ -9036,6 +10105,12 @@
                 "mismatch_percent": 1.4820303816228233
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.905,
+            "change_percent": -0.06690867005956225
           }
         },
         {
@@ -9085,6 +10160,12 @@
                 "mismatch_percent": 1.4068863383931878
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.805,
+            "change_percent": -0.1023578785978585
           }
         },
         {
@@ -9134,6 +10215,12 @@
                 "mismatch_percent": 1.1131725417439702
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.8,
+            "change_percent": -0.1041303390247772
           }
         },
         {
@@ -9183,6 +10270,12 @@
                 "mismatch_percent": 1.1481481481481481
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.2,
+            "change_percent": 0.03766649512848552
           }
         },
         {
@@ -9232,6 +10325,12 @@
                 "mismatch_percent": 1.2217697149203999
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.20000000000005,
+            "change_percent": 0.037666495128507727
           }
         },
         {
@@ -9281,6 +10380,12 @@
                 "mismatch_percent": 1.1851851851851851
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.29999999999995,
+            "change_percent": 0.07311570366679288
           }
         },
         {
@@ -9330,6 +10435,12 @@
                 "mismatch_percent": 1.074074074074074
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.90000000000003,
+            "change_percent": -0.06868113048645874
           }
         },
         {
@@ -9379,6 +10490,12 @@
                 "mismatch_percent": 1.1869436201780417
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.8,
+            "change_percent": -0.1041303390247772
           }
         },
         {
@@ -9428,6 +10545,12 @@
                 "mismatch_percent": 1.4089729328883944
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 281.80499999999995,
+            "change_percent": -0.1023578785978807
           }
         },
         {
@@ -9477,6 +10600,12 @@
                 "mismatch_percent": 1.1851851851851851
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.29999999999995,
+            "change_percent": 0.07311570366679288
           }
         },
         {
@@ -9526,6 +10655,12 @@
                 "mismatch_percent": 1.3703703703703705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 282.0937451732166,
+            "filtered_span": 282.09999999999997,
+            "change_percent": 0.0022172865901559646
           }
         }
       ],
@@ -9554,6 +10689,12 @@
             "mismatch_percent": 1.2686124898140603
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.030927723393158746,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -9649,6 +10790,12 @@
                 "mismatch_percent": 10.399703923019986
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.20000000000002,
+            "change_percent": 0.24214355347107475
           }
         },
         {
@@ -9698,6 +10845,12 @@
                 "mismatch_percent": 10.103626943005182
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.599999999999994,
+            "change_percent": 0.9819379708398301
           }
         },
         {
@@ -9747,6 +10900,12 @@
                 "mismatch_percent": 9.59614672100778
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.80000000000001,
+            "change_percent": 1.3518351795242411
           }
         },
         {
@@ -9796,6 +10955,12 @@
                 "mismatch_percent": 10.207869339272458
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 55.10499999999999,
+            "change_percent": 1.9159284227679096
           }
         },
         {
@@ -9845,6 +11010,12 @@
                 "mismatch_percent": 10.637509266123054
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 53.70000000000002,
+            "change_percent": -0.6825994682399195
           }
         },
         {
@@ -9894,6 +11065,12 @@
                 "mismatch_percent": 9.996297667530545
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.79999999999998,
+            "change_percent": 1.3518351795241967
           }
         },
         {
@@ -9943,6 +11120,12 @@
                 "mismatch_percent": 10.84783413550537
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.19999999999999,
+            "change_percent": 0.24214355347100813
           }
         },
         {
@@ -9992,6 +11175,12 @@
                 "mismatch_percent": 10.266864343958487
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.309999999999974,
+            "change_percent": 0.44558701824741753
           }
         },
         {
@@ -10041,6 +11230,12 @@
                 "mismatch_percent": 10.715609936967
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.404999999999944,
+            "change_percent": 0.6212881923724378
           }
         },
         {
@@ -10090,6 +11285,12 @@
                 "mismatch_percent": 10.921880784894483
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 53.30499999999998,
+            "change_percent": -1.4131464553916673
           }
         },
         {
@@ -10139,6 +11340,12 @@
                 "mismatch_percent": 9.966654316413488
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.29999999999998,
+            "change_percent": 0.42709215781320253
           }
         },
         {
@@ -10188,6 +11395,12 @@
                 "mismatch_percent": 10.284868664446911
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.5,
+            "change_percent": 0.7969893664976357
           }
         },
         {
@@ -10237,6 +11450,12 @@
                 "mismatch_percent": 9.477971121806739
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.89999999999998,
+            "change_percent": 1.5367837838663911
           }
         },
         {
@@ -10286,6 +11505,12 @@
                 "mismatch_percent": 11.609792284866469
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.0,
+            "change_percent": -0.12775365521335846
           }
         },
         {
@@ -10335,6 +11560,12 @@
                 "mismatch_percent": 10.773787486116253
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.099999999999994,
+            "change_percent": 0.05719494912883594
           }
         },
         {
@@ -10384,6 +11615,12 @@
                 "mismatch_percent": 10.340993328391402
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.599999999999994,
+            "change_percent": 0.9819379708398301
           }
         },
         {
@@ -10433,6 +11670,12 @@
                 "mismatch_percent": 10.85587254538718
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.0,
+            "change_percent": -0.12775365521335846
           }
         },
         {
@@ -10482,6 +11725,12 @@
                 "mismatch_percent": 10.452186805040771
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.69999999999999,
+            "change_percent": 1.1668865751820023
           }
         },
         {
@@ -10531,6 +11780,12 @@
                 "mismatch_percent": 10.092764378478664
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 54.29999999999998,
+            "change_percent": 0.42709215781320253
           }
         },
         {
@@ -10580,6 +11835,12 @@
                 "mismatch_percent": 11.921510551647538
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.069075219933524,
+            "filtered_span": 53.79999999999998,
+            "change_percent": -0.49765086389778057
           }
         }
       ],
@@ -10608,6 +11869,12 @@
             "mismatch_percent": 10.47347362181387
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.4848885966701565,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -10703,6 +11970,12 @@
                 "mismatch_percent": 3.1875463306152705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.5149999999999,
+            "change_percent": 0.10193514589065256
           }
         },
         {
@@ -10752,6 +12025,12 @@
                 "mismatch_percent": 3.554239170677527
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.4149999999999,
+            "change_percent": -0.5080536564829874
           }
         },
         {
@@ -10801,6 +12080,12 @@
                 "mismatch_percent": 3.890329751759911
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.00499999999997,
+            "change_percent": -0.18087784430071974
           }
         },
         {
@@ -10850,6 +12135,12 @@
                 "mismatch_percent": 3.4074074074074074
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.705,
+            "change_percent": 0.2072968481188875
           }
         },
         {
@@ -10899,6 +12190,12 @@
                 "mismatch_percent": 3.0022238695329873
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.10499999999996,
+            "change_percent": -0.1254243168122171
           }
         },
         {
@@ -10948,6 +12245,12 @@
                 "mismatch_percent": 2.6686434395848777
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.505,
+            "change_percent": 0.09638979314186003
           }
         },
         {
@@ -10997,6 +12300,12 @@
                 "mismatch_percent": 3.4840622683469236
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.90499999999997,
+            "change_percent": 0.31820390309589275
           }
         },
         {
@@ -11046,6 +12355,12 @@
                 "mismatch_percent": 2.966258806080831
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.60999999999996,
+            "change_percent": -0.3999192778803562
           }
         },
         {
@@ -11095,6 +12410,12 @@
                 "mismatch_percent": 3.445720637273064
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.10999999999999,
+            "change_percent": -0.12265164043777643
           }
         },
         {
@@ -11144,6 +12465,12 @@
                 "mismatch_percent": 3.260466839570211
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.81,
+            "change_percent": -0.2890122229033065
           }
         },
         {
@@ -11193,6 +12520,12 @@
                 "mismatch_percent": 3.038162282326788
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.20999999999992,
+            "change_percent": -0.06719811294929601
           }
         },
         {
@@ -11242,6 +12575,12 @@
                 "mismatch_percent": 3.258052573121066
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.20000000000002,
+            "change_percent": -0.07274346569809964
           }
         },
         {
@@ -11291,6 +12630,12 @@
                 "mismatch_percent": 3.5555555555555554
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 181.20999999999998,
+            "change_percent": 0.4873371619358746
           }
         },
         {
@@ -11340,6 +12685,12 @@
                 "mismatch_percent": 3.075213041867358
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.61,
+            "change_percent": 0.15461599700481443
           }
         },
         {
@@ -11389,6 +12740,12 @@
                 "mismatch_percent": 3.5224323322209865
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.805,
+            "change_percent": -0.291784899277725
           }
         },
         {
@@ -11438,6 +12795,12 @@
                 "mismatch_percent": 2.9640607632456466
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 180.005,
+            "change_percent": -0.18087784430070863
           }
         },
         {
@@ -11487,6 +12850,12 @@
                 "mismatch_percent": 3.40993328391401
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.4149999999999,
+            "change_percent": -0.5080536564829874
           }
         },
         {
@@ -11536,6 +12905,12 @@
                 "mismatch_percent": 3.7037037037037033
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.51499999999993,
+            "change_percent": -0.45260012899446256
           }
         },
         {
@@ -11585,6 +12960,12 @@
                 "mismatch_percent": 3.0022238695329873
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 181.10000000000002,
+            "change_percent": 0.42633828169853505
           }
         },
         {
@@ -11634,6 +13015,12 @@
                 "mismatch_percent": 3.817642698295033
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 180.33117914944756,
+            "filtered_span": 179.7,
+            "change_percent": -0.3500111031406794
           }
         }
       ],
@@ -11662,6 +13049,12 @@
             "mismatch_percent": 3.3107306951237585
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.08785455193874026,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -11757,6 +13150,12 @@
                 "mismatch_percent": 6.585275619681835
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 189.00500000000002,
+            "change_percent": 0.2989993419954873
           }
         },
         {
@@ -11806,6 +13205,12 @@
                 "mismatch_percent": 6.878698224852071
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.40999999999997,
+            "change_percent": -0.016748413928924233
           }
         },
         {
@@ -11855,6 +13260,12 @@
                 "mismatch_percent": 7.410151908114117
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.30499999999998,
+            "change_percent": -0.07246860615086614
           }
         },
         {
@@ -11904,6 +13315,12 @@
                 "mismatch_percent": 7.703703703703704
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.10500000000002,
+            "change_percent": -0.1786023056212227
           }
         },
         {
@@ -11953,6 +13370,12 @@
                 "mismatch_percent": 9.14476119955572
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.11,
+            "change_percent": -0.17594896313446462
           }
         },
         {
@@ -12002,6 +13425,12 @@
                 "mismatch_percent": 7.888888888888888
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.30999999999997,
+            "change_percent": -0.06981526366410806
           }
         },
         {
@@ -12051,6 +13480,12 @@
                 "mismatch_percent": 7.74935113088617
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.305,
+            "change_percent": -0.07246860615085504
           }
         },
         {
@@ -12100,6 +13535,12 @@
                 "mismatch_percent": 8.077065579844387
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 187.89999999999998,
+            "change_percent": -0.28738934757838175
           }
         },
         {
@@ -12149,6 +13590,12 @@
                 "mismatch_percent": 9.781400518710633
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 187.90000000000003,
+            "change_percent": -0.28738934757835954
           }
         },
         {
@@ -12198,6 +13645,12 @@
                 "mismatch_percent": 6.560415122312824
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.5,
+            "change_percent": 0.03101175083277674
           }
         },
         {
@@ -12247,6 +13700,12 @@
                 "mismatch_percent": 9.636767976278724
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.5,
+            "change_percent": 0.03101175083277674
           }
         },
         {
@@ -12296,6 +13755,12 @@
                 "mismatch_percent": 7.148148148148148
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.305,
+            "change_percent": -0.07246860615085504
           }
         },
         {
@@ -12345,6 +13810,12 @@
                 "mismatch_percent": 7.084569732937686
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.005,
+            "change_percent": -0.23166915535642874
           }
         },
         {
@@ -12394,6 +13865,12 @@
                 "mismatch_percent": 7.2727272727272725
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.40500000000003,
+            "change_percent": -0.019401756415649007
           }
         },
         {
@@ -12443,6 +13920,12 @@
                 "mismatch_percent": 7.267334074898035
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.505,
+            "change_percent": 0.03366509331952372
           }
         },
         {
@@ -12492,6 +13975,12 @@
                 "mismatch_percent": 6.93620178041543
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.30499999999998,
+            "change_percent": -0.07246860615086614
           }
         },
         {
@@ -12541,6 +14030,12 @@
                 "mismatch_percent": 10.25925925925926
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 187.60499999999996,
+            "change_percent": -0.44393655429720846
           }
         },
         {
@@ -12590,6 +14085,12 @@
                 "mismatch_percent": 8.188217858466098
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.30499999999998,
+            "change_percent": -0.07246860615086614
           }
         },
         {
@@ -12639,6 +14140,12 @@
                 "mismatch_percent": 7.150796591330122
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.50499999999997,
+            "change_percent": 0.033665093319501516
           }
         },
         {
@@ -12688,6 +14195,12 @@
                 "mismatch_percent": 6.69378698224852
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 188.4415609726458,
+            "filtered_span": 188.70499999999998,
+            "change_percent": 0.13979879278989138
           }
         }
       ],
@@ -12716,6 +14229,12 @@
             "mismatch_percent": 7.770820983995258
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": -0.07525461576195491,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -12811,6 +14330,12 @@
                 "mismatch_percent": 25.185185185185183
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.30499999999998,
+            "change_percent": 2.263006699639658
           }
         },
         {
@@ -12860,6 +14385,12 @@
                 "mismatch_percent": 25.34271952575028
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 54.50999999999996,
+            "change_percent": 0.79299331339584
           }
         },
         {
@@ -12909,6 +14440,12 @@
                 "mismatch_percent": 30.31875463306153
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.39999999999998,
+            "change_percent": 2.438668676612199
           }
         },
         {
@@ -12958,6 +14495,12 @@
                 "mismatch_percent": 26.185185185185183
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.80500000000001,
+            "change_percent": 3.187543420547767
           }
         },
         {
@@ -13007,6 +14550,12 @@
                 "mismatch_percent": 24.916573971078975
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.20999999999995,
+            "change_percent": 2.087344722667095
           }
         },
         {
@@ -13056,6 +14605,12 @@
                 "mismatch_percent": 23.36795252225519
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.50499999999997,
+            "change_percent": 2.6328213880028706
           }
         },
         {
@@ -13105,6 +14660,12 @@
                 "mismatch_percent": 27.887114741923508
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 56.00499999999997,
+            "change_percent": 3.557358108910913
           }
         },
         {
@@ -13154,6 +14715,12 @@
                 "mismatch_percent": 28.995179829440122
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 53.69999999999999,
+            "change_percent": -0.7047561744751629
           }
         },
         {
@@ -13203,6 +14770,12 @@
                 "mismatch_percent": 27.188427299703267
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.19999999999999,
+            "change_percent": 2.0688539882489865
           }
         },
         {
@@ -13252,6 +14825,12 @@
                 "mismatch_percent": 26.38014079288625
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 52.400000000000006,
+            "change_percent": -3.1085516488360665
           }
         },
         {
@@ -13301,6 +14880,12 @@
                 "mismatch_percent": 25.807649461567028
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 54.0,
+            "change_percent": -0.15003414193031084
           }
         },
         {
@@ -13350,6 +14935,12 @@
                 "mismatch_percent": 26.962962962962962
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.00999999999996,
+            "change_percent": 1.7175300343038824
           }
         },
         {
@@ -13399,6 +14990,12 @@
                 "mismatch_percent": 24.037037037037038
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 57.10499999999999,
+            "change_percent": 5.591338894908682
           }
         },
         {
@@ -13448,6 +15045,12 @@
                 "mismatch_percent": 29.54040029651594
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.00999999999996,
+            "change_percent": 1.7175300343038824
           }
         },
         {
@@ -13497,6 +15100,12 @@
                 "mismatch_percent": 29.9962921764924
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 54.10499999999996,
+            "change_percent": 0.04411856946031634
           }
         },
         {
@@ -13546,6 +15155,12 @@
                 "mismatch_percent": 26.743323442136496
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.900000000000006,
+            "change_percent": 3.363205397520308
           }
         },
         {
@@ -13595,6 +15210,12 @@
                 "mismatch_percent": 25.0834879406308
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 53.29999999999998,
+            "change_percent": -1.4443855512016102
           }
         },
         {
@@ -13644,6 +15265,12 @@
                 "mismatch_percent": 28.037037037037038
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 53.5,
+            "change_percent": -1.0745708628383643
           }
         },
         {
@@ -13693,6 +15320,12 @@
                 "mismatch_percent": 23.054114158636025
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 55.80499999999998,
+            "change_percent": 3.1875434205477227
           }
         },
         {
@@ -13742,6 +15375,12 @@
                 "mismatch_percent": 26.990003702332473
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 3000,
+            "clean_span": 54.0811401746071,
+            "filtered_span": 52.900000000000006,
+            "change_percent": -2.184014927928013
           }
         }
       ],
@@ -13770,6 +15409,12 @@
             "mismatch_percent": 26.600930439456565
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 1.29917716809303,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 60000
       }
     },
     {
@@ -13865,6 +15510,12 @@
                 "mismatch_percent": 14.427860696517413
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 969,
+            "clean_span": 140.6830386842656,
+            "filtered_span": 139.59999999999997,
+            "change_percent": -0.7698431128547734
           }
         },
         {
@@ -13914,6 +15565,12 @@
                 "mismatch_percent": 20.37037037037037
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 900,
+            "clean_span": 136.64531649715803,
+            "filtered_span": 137.20999999999998,
+            "change_percent": 0.41324760871235267
           }
         },
         {
@@ -13963,6 +15620,12 @@
                 "mismatch_percent": 12.359550561797752
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 857,
+            "clean_span": 130.5426803705086,
+            "filtered_span": 129.81999999999994,
+            "change_percent": -0.5535970063258566
           }
         },
         {
@@ -14012,6 +15675,12 @@
                 "mismatch_percent": 2.272727272727273
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1212,
+            "clean_span": 135.3706022992252,
+            "filtered_span": 134.84500000000003,
+            "change_percent": -0.3882691591069132
           }
         },
         {
@@ -14061,6 +15730,12 @@
                 "mismatch_percent": 5.769230769230769
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 966,
+            "clean_span": 140.70580778322653,
+            "filtered_span": 143.42499999999998,
+            "change_percent": 1.9325372986470413
           }
         },
         {
@@ -14110,6 +15785,12 @@
                 "mismatch_percent": 11.428571428571429
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1125,
+            "clean_span": 135.23819234539286,
+            "filtered_span": 135.26,
+            "change_percent": 0.016125366827912657
           }
         },
         {
@@ -14159,6 +15840,12 @@
                 "mismatch_percent": 5.88235294117647
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 968,
+            "clean_span": 139.07975081777084,
+            "filtered_span": 139.09500000000003,
+            "change_percent": 0.0109643439390128
           }
         },
         {
@@ -14208,6 +15895,12 @@
                 "mismatch_percent": 2.73972602739726
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 963,
+            "clean_span": 134.10933980837842,
+            "filtered_span": 133.65999999999997,
+            "change_percent": -0.3350548209546722
           }
         },
         {
@@ -14257,6 +15950,12 @@
                 "mismatch_percent": 7.6923076923076925
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1039,
+            "clean_span": 134.80226291055703,
+            "filtered_span": 134.20999999999998,
+            "change_percent": -0.4393568014136595
           }
         },
         {
@@ -14306,6 +16005,12 @@
                 "mismatch_percent": null
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 853,
+            "clean_span": 137.66513260620172,
+            "filtered_span": 138.01999999999998,
+            "change_percent": 0.2577757977492823
           }
         },
         {
@@ -14355,6 +16060,12 @@
                 "mismatch_percent": 9.815950920245399
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1235,
+            "clean_span": 140.25640847687515,
+            "filtered_span": 141.22999999999996,
+            "change_percent": 0.6941511861722427
           }
         },
         {
@@ -14404,6 +16115,12 @@
                 "mismatch_percent": 2.307692307692308
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1400,
+            "clean_span": 140.50894073114353,
+            "filtered_span": 142.92000000000002,
+            "change_percent": 1.7159472246466745
           }
         },
         {
@@ -14453,6 +16170,12 @@
                 "mismatch_percent": 5.4945054945054945
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1143,
+            "clean_span": 135.40822910409597,
+            "filtered_span": 135.36999999999995,
+            "change_percent": -0.028232482138612625
           }
         },
         {
@@ -14502,6 +16225,12 @@
                 "mismatch_percent": 7.011070110701106
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1170,
+            "clean_span": 135.0769467284701,
+            "filtered_span": 137.0,
+            "change_percent": 1.423672446043378
           }
         },
         {
@@ -14551,6 +16280,12 @@
                 "mismatch_percent": null
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1022,
+            "clean_span": 133.59498075154784,
+            "filtered_span": 135.48499999999999,
+            "change_percent": 1.4147382168250067
           }
         },
         {
@@ -14600,6 +16335,12 @@
                 "mismatch_percent": 11.627906976744185
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1339,
+            "clean_span": 135.77175762087083,
+            "filtered_span": 136.61999999999998,
+            "change_percent": 0.6247561304301374
           }
         },
         {
@@ -14649,6 +16390,12 @@
                 "mismatch_percent": null
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 945,
+            "clean_span": 139.43693577559597,
+            "filtered_span": 140.07999999999998,
+            "change_percent": 0.46118642870849325
           }
         },
         {
@@ -14698,6 +16445,12 @@
                 "mismatch_percent": 2.247191011235955
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1273,
+            "clean_span": 139.78606610153133,
+            "filtered_span": 140.14,
+            "change_percent": 0.2531968373811866
           }
         },
         {
@@ -14747,6 +16500,12 @@
                 "mismatch_percent": 1.3888888888888888
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1343,
+            "clean_span": 137.65707831029556,
+            "filtered_span": 138.29000000000002,
+            "change_percent": 0.4597814347605089
           }
         },
         {
@@ -14796,6 +16555,12 @@
                 "mismatch_percent": 5.154639175257731
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 1126,
+            "clean_span": 136.853667060146,
+            "filtered_span": 137.625,
+            "change_percent": 0.5636187589441954
           }
         }
       ],
@@ -14824,6 +16589,12 @@
             "mismatch_percent": 7.603801900950475
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.3863672848496469,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 21848
       }
     },
     {
@@ -14921,6 +16692,12 @@
                 "mismatch_percent": 1.9261006289308176
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2936,
+            "clean_span": 182.06737467456094,
+            "filtered_span": 182.125,
+            "change_percent": 0.03165054999121342
           }
         },
         {
@@ -14970,6 +16747,12 @@
                 "mismatch_percent": 1.7937219730941705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2878,
+            "clean_span": 182.200394449803,
+            "filtered_span": 182.315,
+            "change_percent": 0.06290082441537947
           }
         },
         {
@@ -15019,6 +16802,12 @@
                 "mismatch_percent": 2.694977541853818
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2937,
+            "clean_span": 182.06453148803485,
+            "filtered_span": 181.70000000000002,
+            "change_percent": -0.20022103429782057
           }
         },
         {
@@ -15068,6 +16857,12 @@
                 "mismatch_percent": 2.084152575697994
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2939,
+            "clean_span": 182.05884511498266,
+            "filtered_span": 182.50999999999996,
+            "change_percent": 0.24780717725214618
           }
         },
         {
@@ -15117,6 +16912,12 @@
                 "mismatch_percent": 1.9959266802443993
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2879,
+            "clean_span": 182.19507637271408,
+            "filtered_span": 182.40999999999997,
+            "change_percent": 0.11796346617305442
           }
         },
         {
@@ -15166,6 +16967,12 @@
                 "mismatch_percent": 1.8095987411487018
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2942,
+            "clean_span": 182.05187988703955,
+            "filtered_span": 182.49999999999997,
+            "change_percent": 0.24614967625629092
           }
         },
         {
@@ -15215,6 +17022,12 @@
                 "mismatch_percent": 2.370249284838578
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2931,
+            "clean_span": 182.0815906071914,
+            "filtered_span": 182.0,
+            "change_percent": -0.04480991566435666
           }
         },
         {
@@ -15264,6 +17077,12 @@
                 "mismatch_percent": 2.2894521668029433
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2939,
+            "clean_span": 182.05884511498266,
+            "filtered_span": 182.10000000000002,
+            "change_percent": 0.02260526534230145
           }
         },
         {
@@ -15313,6 +17132,12 @@
                 "mismatch_percent": 2.5347506132461164
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2937,
+            "clean_span": 182.06453148803485,
+            "filtered_span": 181.63999999999996,
+            "change_percent": -0.23317638233275595
           }
         },
         {
@@ -15362,6 +17187,12 @@
                 "mismatch_percent": 2.2021234762092017
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2938,
+            "clean_span": 182.06168830150875,
+            "filtered_span": 182.01500000000001,
+            "change_percent": -0.02564422089255114
           }
         },
         {
@@ -15411,6 +17242,12 @@
                 "mismatch_percent": 1.9168026101141926
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2877,
+            "clean_span": 182.2057125268919,
+            "filtered_span": 182.4,
+            "change_percent": 0.10663083523214656
           }
         },
         {
@@ -15460,6 +17297,12 @@
                 "mismatch_percent": 2.7291242362525456
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2881,
+            "clean_span": 182.18444021853634,
+            "filtered_span": 182.0,
+            "change_percent": -0.10123818385099348
           }
         },
         {
@@ -15509,6 +17352,12 @@
                 "mismatch_percent": 1.6768916155419225
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2942,
+            "clean_span": 182.05187988703955,
+            "filtered_span": 182.69500000000002,
+            "change_percent": 0.3532620005679332
           }
         },
         {
@@ -15558,6 +17407,12 @@
                 "mismatch_percent": 2.323685283326539
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2880,
+            "clean_span": 182.1897582956252,
+            "filtered_span": 182.10500000000002,
+            "change_percent": -0.04652198697561172
           }
         },
         {
@@ -15607,6 +17462,12 @@
                 "mismatch_percent": 2.558048012593467
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2938,
+            "clean_span": 182.06168830150875,
+            "filtered_span": 181.815,
+            "change_percent": -0.13549709651171638
           }
         },
         {
@@ -15656,6 +17517,12 @@
                 "mismatch_percent": 1.9567876070118222
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2877,
+            "clean_span": 182.2057125268919,
+            "filtered_span": 182.5,
+            "change_percent": 0.16151385652338757
           }
         },
         {
@@ -15705,6 +17572,12 @@
                 "mismatch_percent": 2.0366598778004072
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2879,
+            "clean_span": 182.19507637271408,
+            "filtered_span": 182.29999999999998,
+            "change_percent": 0.05758861840550189
           }
         },
         {
@@ -15754,6 +17627,12 @@
                 "mismatch_percent": 2.320846905537459
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2880,
+            "clean_span": 182.1897582956252,
+            "filtered_span": 182.20499999999998,
+            "change_percent": 0.008365840383861567
           }
         },
         {
@@ -15803,6 +17682,12 @@
                 "mismatch_percent": 1.7937219730941705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2878,
+            "clean_span": 182.200394449803,
+            "filtered_span": 182.43,
+            "change_percent": 0.12601814111892207
           }
         },
         {
@@ -15852,6 +17737,12 @@
                 "mismatch_percent": 1.8927444794952681
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2938,
+            "clean_span": 182.06168830150875,
+            "filtered_span": 181.715,
+            "change_percent": -0.19042353432129344
           }
         }
       ],
@@ -15880,6 +17771,12 @@
             "mismatch_percent": 2.144571993463393
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.02824619484075197,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 58226
       }
     },
     {
@@ -15980,6 +17877,12 @@
                 "mismatch_percent": 1.8201875344732488
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2767,
+            "clean_span": 182.7385351191027,
+            "filtered_span": 182.99999999999997,
+            "change_percent": 0.1430814145067183
           }
         },
         {
@@ -16029,6 +17932,12 @@
                 "mismatch_percent": 2.2148394241417497
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2767,
+            "clean_span": 182.7385351191027,
+            "filtered_span": 182.8,
+            "change_percent": 0.03363542388978846
           }
         },
         {
@@ -16078,6 +17987,12 @@
                 "mismatch_percent": 2.3230088495575223
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2764,
+            "clean_span": 182.74416442133938,
+            "filtered_span": 182.485,
+            "change_percent": -0.14181816538985093
           }
         },
         {
@@ -16127,6 +18042,12 @@
                 "mismatch_percent": 2.384914032168608
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2763,
+            "clean_span": 182.7460408554183,
+            "filtered_span": 183.10000000000002,
+            "change_percent": 0.19368909056791672
           }
         },
         {
@@ -16176,6 +18097,12 @@
                 "mismatch_percent": 2.0498614958448753
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2763,
+            "clean_span": 182.7460408554183,
+            "filtered_span": 183.09000000000003,
+            "change_percent": 0.188217015795078
           }
         },
         {
@@ -16225,6 +18152,12 @@
                 "mismatch_percent": 1.8262313226342002
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2756,
+            "clean_span": 182.7665587329536,
+            "filtered_span": 183.32500000000002,
+            "change_percent": 0.30554893133507566
           }
         },
         {
@@ -16274,6 +18207,12 @@
                 "mismatch_percent": 3.1868131868131866
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2768,
+            "clean_span": 182.73665868502383,
+            "filtered_span": 182.50000000000003,
+            "change_percent": -0.12950805094434914
           }
         },
         {
@@ -16323,6 +18262,12 @@
                 "mismatch_percent": 1.6675931072818233
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2766,
+            "clean_span": 182.74041155318156,
+            "filtered_span": 183.20000000000002,
+            "change_percent": 0.2514979817065388
           }
         },
         {
@@ -16372,6 +18317,12 @@
                 "mismatch_percent": 2.827050997782705
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2766,
+            "clean_span": 182.74041155318156,
+            "filtered_span": 182.47500000000005,
+            "change_percent": -0.14523966041537495
           }
         },
         {
@@ -16421,6 +18372,12 @@
                 "mismatch_percent": 2.5400331308669246
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2764,
+            "clean_span": 182.74416442133938,
+            "filtered_span": 182.58499999999998,
+            "change_percent": -0.0870968557838192
           }
         },
         {
@@ -16470,6 +18427,12 @@
                 "mismatch_percent": 1.4991671293725708
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2765,
+            "clean_span": 182.7422879872605,
+            "filtered_span": 182.8,
+            "change_percent": 0.03158109344867377
           }
         },
         {
@@ -16519,6 +18482,12 @@
                 "mismatch_percent": 2.547065337763012
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2769,
+            "clean_span": 182.73478225094487,
+            "filtered_span": 182.60000000000002,
+            "change_percent": -0.07375839962407982
           }
         },
         {
@@ -16568,6 +18537,12 @@
                 "mismatch_percent": 1.8333333333333333
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2759,
+            "clean_span": 182.57762334684654,
+            "filtered_span": 183.20999999999998,
+            "change_percent": 0.3463604364879469
           }
         },
         {
@@ -16617,6 +18592,12 @@
                 "mismatch_percent": 2.374378796245168
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2767,
+            "clean_span": 182.7385351191027,
+            "filtered_span": 182.57000000000002,
+            "change_percent": -0.09222746531968307
           }
         },
         {
@@ -16666,6 +18647,12 @@
                 "mismatch_percent": 2.211166390270868
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2765,
+            "clean_span": 182.7422879872605,
+            "filtered_span": 182.79999999999998,
+            "change_percent": 0.031581093448651565
           }
         },
         {
@@ -16715,6 +18702,12 @@
                 "mismatch_percent": 1.6648168701442843
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2764,
+            "clean_span": 182.74416442133938,
+            "filtered_span": 182.79999999999998,
+            "change_percent": 0.03055395986919507
           }
         },
         {
@@ -16764,6 +18757,12 @@
                 "mismatch_percent": 2.2185246810870773
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2765,
+            "clean_span": 182.7422879872605,
+            "filtered_span": 182.57999999999998,
+            "change_percent": -0.08880702384105321
           }
         },
         {
@@ -16813,6 +18812,12 @@
                 "mismatch_percent": 2.8745163073521285
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2769,
+            "clean_span": 182.73478225094487,
+            "filtered_span": 182.7,
+            "change_percent": -0.019034280456320385
           }
         },
         {
@@ -16862,6 +18867,12 @@
                 "mismatch_percent": 1.8815716657443278
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2766,
+            "clean_span": 182.74041155318156,
+            "filtered_span": 183.075,
+            "change_percent": 0.18309493996135906
           }
         },
         {
@@ -16911,6 +18922,12 @@
                 "mismatch_percent": 2.545655783065855
               }
             }
+          },
+          "base_span_comparison": {
+            "scored_points": 2757,
+            "clean_span": 182.76320573107813,
+            "filtered_span": 182.53999999999996,
+            "change_percent": -0.12212837380768393
           }
         }
       ],
@@ -16939,6 +18956,12 @@
             "mismatch_percent": 2.2252359469707454
           }
         }
+      },
+      "base_span_comparison": {
+        "change_percent": 0.04196115527173638,
+        "scored_runs": 20,
+        "total_runs": 20,
+        "scored_points": 55290
       }
     }
   ]

@@ -29,7 +29,7 @@ flowchart LR
 
 | 模块 | 职责 |
 | --- | --- |
-| `ct_breath.config` | 读取外部 TOML 配置，不依赖环境变量 |
+| `ct_breath.config` | 读取外部 TOML 配置，支持启动参数及配置路径环境变量 |
 | `ct_breath.app` | 创建 FastAPI 与 Socket.IO 应用 |
 | `ct_breath.main` | 本地和 exe 启动入口，启动后端与静态 Web Console |
 | `ct_breath.frontend_static` | 启动和注入静态前端运行配置，服务 Python 包内的原生 Console 静态源码 |
@@ -72,15 +72,15 @@ Console 壳层使用原生 HTML/CSS/JavaScript，资源存放于 `src/ct_breath/
 
 ## 配置边界
 
-项目不依赖 `.env`。运行时配置默认从以下位置读取：
+项目不依赖 `.env`。运行时配置可通过 `--config` 或 `RESPIRASCOPE_CONFIG` 指定；未指定时兼容查找已有配置，无配置时在对应平台的默认位置创建：
 
 ```text
-Windows: D:/ct/breath-config/breath.toml
+Windows: %LOCALAPPDATA%/RespiraScope/config/breath.toml
 macOS:   ~/Library/Application Support/RespiraScope/config/breath.toml
 Linux:   /ct/breath-config/breath.toml
 ```
 
-这种方式更适合 exe 和 Docker 部署：程序包保持不变，部署环境只替换外部配置文件。
+旧的 `D:/ct/breath-config/` 配置仍兼容读取。部署时可以只替换外部配置文件，无需修改程序包。
 
 ## 端口避让
 

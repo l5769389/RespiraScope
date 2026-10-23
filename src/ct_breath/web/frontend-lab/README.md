@@ -29,10 +29,13 @@ then choose Generate Preview; this does not change the live signal. Apply to Liv
 Monitor sends only signal parameters and opens the realtime monitor. Filter
 settings in this page affect previews only.
 
-The bandpass uses one dual-handle slider (0.01–20 Hz), with Hz and BPM displayed
-to two decimal places. Peak sensitivity uses the same Conservative, Standard and
-Sensitive options as record analysis. Initial filter settings match the time-based
-record analysis defaults: 0.10–0.67 Hz, order 1 and Gaussian sigma 1.80.
+Offline previews use the same baseline-preserving, forward-backward low-pass
+filter as record analysis, regardless of binning mode. A single-handle slider
+sets the upper cutoff (0.01–20 Hz, strictly below half the sampling rate), with
+Hz and BPM displayed to two decimal places. Defaults are 2.00 Hz, order 4 and
+Gaussian sigma 1.00. Peak sensitivity uses the same Conservative, Standard and
+Sensitive options as record analysis. Time, fixed-amplitude and relative-amplitude
+binning share the filtered curve; switching binning does not re-filter it.
 
 The chart has a time axis in seconds, hover values, clickable legend and a zoom
 slider. Scenario thumbnails load once, on demand when expanded. Pending changes,

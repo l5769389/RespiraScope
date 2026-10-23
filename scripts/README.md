@@ -97,6 +97,12 @@ Results, exact metric definitions, source hashes and seed-42 illustration data a
 in `docs/measurements/shared_binning/`. `build_shared_binning_report.py` assembles
 the DOCX using the document runtime's `python-docx`; render and visually check it
 before distributing. The chart script currently uses the macOS Hiragino font.
-The older `measure_filter_modes.py` / `measure_filter_amplitude.py` explicitly
-retain historical 5-second time context for reproducing their historical reports;
-they do not describe the new shared-context UI.
+
+The current report is `docs/时间分箱与固定幅值分箱波形对比.docx` (with a PDF
+copy). Keep its measurements and paired figures together. Historical multi-filter
+experiments and superseded overview charts are no longer part of this workflow.
+
+`reference_binning_metrics.py` measures reference bin disagreement and amplitude
+span change against the clean base signal. `raw_comparison_metrics.py` retains
+the observed-input comparison in the measurement JSON. Their tests live in
+`tests/`; neither module is used by the running application.

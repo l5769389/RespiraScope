@@ -458,6 +458,8 @@ API 默认尝试 8000，网页默认尝试 5175；端口占用时向后寻找，
 ## 文档
 
 - [呼吸信号滤波与波峰波谷识别说明](docs/filtering-algorithm-zh.md)
+- [时间与固定幅值分箱对比报告（PDF）](docs/时间分箱与固定幅值分箱波形对比.pdf)
+- [时间与固定幅值分箱对比报告（Word）](docs/时间分箱与固定幅值分箱波形对比.docx)
 - [对外接口说明](docs/integration-api-zh.md)
 - [系统架构说明](docs/architecture-zh.md)
 - [开源发布检查清单](docs/open-source-release-checklist-zh.md)

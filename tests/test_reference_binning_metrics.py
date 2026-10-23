@@ -3,7 +3,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
-from reference_binning_metrics import reference_labels, compare_reference, summarize_reference
+from reference_binning_metrics import (reference_labels, compare_reference, summarize_reference,
+                                      compare_base_span, summarize_base_span)
 
 
 def test_reference_triangular_breath_known_time_bins_direction_and_bounds():
@@ -36,3 +37,35 @@ def test_empty_is_missing_and_aggregate_uses_sample_weights():
     assert result['scored_runs']==2
     assert result['modes']['time']['mismatch_percent']==pytest.approx(20)
     assert summarize_reference([empty])['modes']['time']['mismatch_percent'] is None
+
+
+@pytest.mark.parametrize('gain, expected', [(0.8, -20), (1.2, 20), (1, 0)])
+def test_base_span_measures_gain_independent_of_offset(gain, expected):
+    clean=np.linspace(-50, 50, 1001)
+    result=compare_base_span(clean, gain*clean+70, np.ones(len(clean), bool))
+    assert result['clean_span']==pytest.approx(90)
+    assert result['change_percent']==pytest.approx(expected)
+
+
+def test_base_span_excludes_artifacts_at_identical_timestamps():
+    clean=np.arange(101, dtype=float)
+    filtered=.5*clean
+    filtered[-20:]=10000
+    valid=np.arange(101)<81
+    result=compare_base_span(clean, filtered, valid)
+    assert result['scored_points']==81
+    assert result['change_percent']==pytest.approx(-50)
+
+
+def test_base_span_missing_data_and_run_mean():
+    empty=compare_base_span([0, 1], [0, 1], [False, False])
+    flat=compare_base_span([5, 5], [4, 6], [True, True])
+    assert empty['change_percent'] is None
+    assert flat['change_percent'] is None
+    a=compare_base_span([0, 10], [0, 8], [True, True])
+    b=compare_base_span([0, 5, 10], [0, 5.5, 11], [True]*3)
+    result=summarize_base_span([empty, flat, a, b])
+    assert result['change_percent']==pytest.approx(-5)
+    assert result['scored_runs']==2
+    assert result['scored_points']==5
+    assert summarize_base_span([empty, flat])['change_percent'] is None

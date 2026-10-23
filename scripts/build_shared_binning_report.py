@@ -85,12 +85,12 @@ for offset in range(0,len(rows),2):
     else:
         para('时间与固定幅值分箱波形对比','Title')
         para('16 种模拟波形，每种 20 次，每周期 10 箱；图示为其中一次。两种分箱共用滤波曲线。','Caption')
-        explain('参考来源','用未加入噪声和伪影的模拟曲线，分别按时间规则、固定幅值规则生成参考分箱；幅值上下限与实际设置相同。')
-        explain('核对数据占比','两种方式都已分箱且有参考划分的点数，占整段记录的比例。分母是整段记录的点数。')
-        explain('参考不一致率','在这批共同核对点中，某方式的实际吸呼方向或箱号与自身参考不同的比例。分母是核对点数，不是统计两种方式彼此有多少不同。')
-        explain('例','整段 1,000 点，共同核对 900 点，占比为 90%；其中时间分箱有 27 点与时间参考不同，不一致率为 3%（27 ÷ 900）。')
-        para('灰线：原始；蓝线：滤波；绿线：无噪声参考；橙虚线：排除区间的滤波曲线。底部蓝带：吸气；黄带：呼气；空白：未分箱。竖／横虚线：分箱边界。','Caption')
-    t=table(['呼吸状态','时间分箱','固定幅值分箱','核对数据占比'],widths)
+        explain('数据源','两条模拟曲线：一条未加入噪声、伪影，称为基础曲线；另一条在同一基础曲线上加入噪声、伪影，再进行滤波。')
+        explain('参考不一致率','将基础曲线与加入噪声、伪影后的滤波曲线，分别按同一种方式分箱，比较同一时刻的吸呼方向和箱号，统计不同的比例。时间分箱与时间分箱比，固定幅值分箱与固定幅值分箱比。')
+        explain('幅值跨度变化','比较上述两条曲线的幅值跨度，正值表示滤波后增大，负值表示缩小，取 20 次结果的平均值。跨度取数值从小到大排列后 95% 与 5% 位置的差值，减少极端值影响。')
+        para('统计时排除已识别的伪影片段；分箱对比仅使用两种方式均已分箱、且基础曲线可确定吸呼方向的采样点。幅值对比不受分箱上下限限制。','Caption')
+        para('绿线：基础曲线；灰线：加入噪声、伪影后的曲线；蓝线：滤波曲线；橙虚线：被排除片段的滤波曲线。底部蓝带：吸气；黄带：呼气；空白：未分箱。竖／横虚线：分箱边界。','Caption')
+    t=table(['呼吸状态','时间分箱','固定幅值分箱','相对基础曲线\n幅值跨度变化'],widths)
     for row in rows[offset:offset+2]:
         cells=t.add_row().cells;cells[0].text=row['name']
         result=row['reference_comparison']
@@ -98,16 +98,13 @@ for offset in range(0,len(rows),2):
             p=c.paragraphs[0];p.paragraph_format.line_spacing=1;p.alignment=WD_ALIGN_PARAGRAPH.CENTER
             p.add_run().add_picture(str(DATA/'figures'/f"{row['id']}_{mode}.png"),width=Inches(3.7 if offset==0 else 3.94))
             add_metric(c,result['modes'][mode]['mismatch_percent'])
-        cells[3].text=fmt(result['scored_percent'])
+        change=row['base_span_comparison']['change_percent']
+        cells[3].text='—' if change is None else f'{change:+.2f}%'
         if result['scored_runs']<result['total_runs']:
-            cells[3].add_paragraph(f"{result['scored_runs']}／{result['total_runs']} 次有核对数据")
+            cells[0].add_paragraph('仅少量片段可对比分箱')
         for p in cells[0].paragraphs+cells[3].paragraphs:
             p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-    style_table(t,widths)
-    if offset==0:
-        para('各自参考规则不同，不据此作综合排名；核对占比低时仅代表少量片段。结果为模拟测算，不代表 CT 重建质量。','Caption')
-    if any(row['id'] in ['apnea','periodic_weakening'] for row in rows[offset:offset+2]):
-        para('模拟的暂停与周期性减弱仍保留微弱呼吸振荡，此处不评价暂停识别能力。','Caption')
+    style_table(t,widths,compact=offset==0)
 
 d.core_properties.title='时间与固定幅值分箱波形对比'
 d.core_properties.subject='模拟波形与分箱结果对照'
