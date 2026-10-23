@@ -6,7 +6,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-from matplotlib.collections import LineCollection
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'docs/measurements/shared_binning'
@@ -31,7 +30,7 @@ def main():
         ylim=(lo-(hi-lo)*.08,hi+(hi-lo)*.12)
         detail=DETAIL.get(sid,(200,200+min(16,120/row['preset']['bpm'])))
         for mode in ['time','fixed']:
-            fig,axes=plt.subplots(2,1,figsize=(4.8,3.05),gridspec_kw={'height_ratios':[1,1.15]})
+            fig,axes=plt.subplots(2,1,figsize=(5.0,2.85),gridspec_kw={'height_ratios':[1,1.15]})
             fig.subplots_adjust(left=.115,right=.965,bottom=.13,top=.94,hspace=.43)
             for n,ax in enumerate(axes):
                 ax.plot(x,raw[:,1],color='#a5adb8',lw=.55,zorder=1)
@@ -51,18 +50,18 @@ def main():
                     ax.axvspan(a,z,ymin=0,ymax=.055,color=color,lw=0,zorder=5)
                     if mode=='time' and n==1:
                         ax.axvline(a,color=color,ls='--',lw=.45,alpha=.65)
-                ax.set_ylim(*ylim);ax.grid(axis='y',alpha=.16);ax.tick_params(labelsize=7,pad=2)
+                ax.set_ylim(*ylim);ax.grid(axis='y',alpha=.16);ax.tick_params(labelsize=8.5,pad=2)
                 if n==0:
-                    ax.set_xlim(0,60);ax.set_xticks([0,20,40,60]);ax.set_title('完整 60 秒',fontsize=8,loc='left',pad=2)
+                    ax.set_xlim(0,60);ax.set_xticks([0,20,40,60]);ax.set_title('完整 60 秒',fontsize=9,loc='left',pad=2)
                 else:
                     a,z=detail[0]-180,detail[1]-180
-                    ax.set_xlim(a,z);ax.set_title('局部放大',fontsize=8,loc='left',pad=2)
+                    ax.set_xlim(a,z);ax.set_title('局部放大',fontsize=9,loc='left',pad=2)
                     # Label only comfortably sized bins in the detail panel.
                     for b in d['bins'][mode]:
                         mid=(b['start']+b['end'])/100-180
                         if a<mid<z and (b['end']-b['start'])/50>(z-a)*.035:
-                            ax.text(mid,.07,str(b['bin']),transform=ax.get_xaxis_transform(),ha='center',fontsize=6,color='#344054')
-                    ax.set_xlabel('记录内时间 / 秒',fontsize=8,labelpad=1)
+                            ax.text(mid,.07,str(b['bin']),transform=ax.get_xaxis_transform(),ha='center',fontsize=7,color='#344054')
+                    ax.set_xlabel('记录内时间 / 秒',fontsize=9,labelpad=1)
             fig.savefig(figdir/f'{sid}_{mode}.png',dpi=230)
             plt.close(fig)
 if __name__=='__main__':main()
