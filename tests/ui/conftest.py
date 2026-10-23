@@ -36,7 +36,7 @@ storage_root = "{folder.as_posix()}/records"
 ''')
     log = folder / 'startup.log'
     with log.open('w') as output:
-        process = subprocess.Popen([sys.executable, '-m', 'ct_breath', '--config', str(config)],
+        process = subprocess.Popen([sys.executable, '-m', 'ct_breath', '--no-browser', '--config', str(config)],
                                    cwd=folder, stdout=output, stderr=subprocess.STDOUT)
     try:
         deadline = time.monotonic() + 30

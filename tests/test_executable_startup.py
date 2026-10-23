@@ -105,7 +105,7 @@ def test_two_instances_with_occupied_ports_print_working_urls(tmp_path):
             log_path = tmp_path / f'start-{index}.log'
             log = stack.enter_context(log_path.open('w', encoding='utf-8'))
             process = subprocess.Popen(
-                [sys.executable, '-m', 'ct_breath', '--config', str(config_path)],
+                [sys.executable, '-m', 'ct_breath', '--no-browser', '--config', str(config_path)],
                 cwd=tmp_path, env={**os.environ, 'PYTHONPATH': str(source), 'PYTHONUTF8': '1'},
                 stdout=log, stderr=subprocess.STDOUT,
             )
@@ -134,3 +134,59 @@ def test_two_instances_with_occupied_ports_print_working_urls(tmp_path):
             assert payload['backendPort'] == int(api_port)
             assert payload['consolePort'] == int(ui_port)
             assert 'already in use' in output
+
+
+@pytest.mark.parametrize('reload', [False, True])
+def test_startup_opens_actual_console_once_after_services_are_ready(tmp_path, reload):
+    """Use real servers, replacing only the external browser with a URL recorder."""
+    source = Path(__file__).resolve().parents[1] / 'src'
+    config_path = tmp_path / 'breath.toml'
+    config_path.write_text(
+        '[backend]\nhost="127.0.0.1"\nport=0\n'
+        '[console]\nhost="127.0.0.1"\nport=0\n'
+        '[mock]\nenabled=false\n'
+        f'[record]\nstorage_root={json.dumps(str(tmp_path / "records"))}\n',
+        encoding='utf-8',
+    )
+    probe = tmp_path / 'opened.jsonl'
+    launcher = '''
+import json, os, webbrowser
+from urllib.request import urlopen
+from ct_breath.main import main
+class Probe(webbrowser.BaseBrowser):
+    def open(self, url, new=0, autoraise=True):
+        with urlopen(url + '/runtime-config.js', timeout=2) as response:
+            config = json.loads(response.read().decode().split(' = ', 1)[1].rstrip(';\\n'))
+        with urlopen(f"http://127.0.0.1:{config['backendPort']}/health", timeout=2) as response:
+            status = response.status
+        with open(os.environ['BROWSER_PROBE'], 'a') as output:
+            output.write(json.dumps({'url':url, 'health':status}) + '\\n')
+        return True
+webbrowser.register('probe', None, Probe(), preferred=True)
+raise SystemExit(main())
+'''
+    log_path = tmp_path / 'startup.log'
+    with log_path.open('w') as log:
+        process = subprocess.Popen(
+            [sys.executable, '-c', launcher, '--config', str(config_path), *(['--reload'] if reload else [])],
+            cwd=tmp_path,
+            env={**os.environ, 'PYTHONPATH': str(source), 'BROWSER_PROBE': str(probe)},
+            stdout=log, stderr=subprocess.STDOUT,
+        )
+    try:
+        deadline = time.monotonic() + 30
+        while not probe.exists() or not probe.read_text().strip():
+            assert process.poll() is None, log_path.read_text()
+            assert time.monotonic() < deadline, log_path.read_text()
+            time.sleep(0.05)
+        time.sleep(0.5)
+        calls = [json.loads(line) for line in probe.read_text().splitlines()]
+        console_url = re.search(r'Open Console: (http://\S+)', log_path.read_text())[1]
+        assert calls == [{'url': console_url, 'health': 200}]
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)

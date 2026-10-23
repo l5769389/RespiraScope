@@ -20,6 +20,7 @@ def parse_args(argv=None):
     parser.add_argument("--port", type=port_number, help="Preferred backend port")
     parser.add_argument("--ui-port", type=port_number, help="Preferred web UI port")
     parser.add_argument("--reload", action="store_true", help="Reload Python code during development; refresh the browser for UI edits")
+    parser.add_argument("--no-browser", action="store_true", help="Do not automatically open the web console")
     return parser.parse_args(argv)
 
 
@@ -187,6 +188,14 @@ def main(argv=None):
                     raise SystemExit("Web UI failed to start; check the address and packaged frontend resources.")
             else:
                 warnings.append("Breath Console is disabled in [console].enabled.")
+
+            if console_url and not args.no_browser:
+                from ct_breath.browser_launch import start_browser_when_ready
+
+                # The launcher owns this worker so --reload never opens another tab.
+                listeners.callback(start_browser_when_ready(
+                    console_url, endpoint_url(config.backend_host, config.backend_port) + "/health",
+                ))
 
             if args.reload:
                 print_startup_summary(config, console_url, warnings)

@@ -64,6 +64,8 @@ def build_command(root: Path, onedir: bool, app_bundle: bool) -> list[str]:
         "--add-data",
         add_data_arg(root / "src" / "ct_breath" / "web" / "frontend-api-docs", "frontend-api-docs"),
     ]
+    if sys.platform.startswith("win"):
+        command.extend(["--icon", str(root / "src/ct_breath/web/frontend-console/assets/logo.ico")])
     command.append(str(root / "src" / "ct_breath" / "__main__.py"))
     return command
 
@@ -158,6 +160,7 @@ def create_macos_app_bundle(root: Path):
     macos_dir.mkdir(parents=True)
     resources_dir.mkdir(parents=True)
     shutil.move(str(payload_source), str(payload_target))
+    shutil.copy2(root / "src/ct_breath/web/frontend-console/assets/logo.icns", resources_dir / "RespiraScope.icns")
 
     launcher = macos_dir / "RespiraScope"
     launcher.write_text(
@@ -195,6 +198,7 @@ open -a Terminal "$RUN_COMMAND"
         "CFBundleIdentifier": "io.respirascope.app",
         "CFBundleInfoDictionaryVersion": "6.0",
         "CFBundleName": "RespiraScope",
+        "CFBundleIconFile": "RespiraScope.icns",
         "CFBundlePackageType": "APPL",
         "CFBundleShortVersionString": "0.1.0",
         "CFBundleVersion": "0.1.0",

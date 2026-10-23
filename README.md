@@ -1,3 +1,5 @@
+<img src="src/ct_breath/web/frontend-console/assets/logo.svg" width="64" height="64" alt="RespiraScope Logo" />
+
 # RespiraScope
 
 RespiraScope 是一个呼吸信号采集、滤波、实时展示和记录分析工具。它支持真实 TCP 呼吸传感器，也内置了模拟呼吸信号，适合用于设备联调、算法验证、呼吸波形处理学习和前端可视化演示。
@@ -129,7 +131,9 @@ uv sync
 uv run respirascope
 ```
 
-控制台会打印实际的 Backend API、Open Console、Monitor 和 Mock Lab 地址。旧命令 `uv run RespiraScope` 仍然兼容。
+服务就绪后会自动用默认浏览器打开 Web Console，并在终端打印实际的 Backend API、Open Console、Monitor 和 Mock Lab 地址。开发模式重载不会重复打开浏览器。旧命令 `uv run RespiraScope` 仍然兼容。
+
+无需自动打开浏览器时，使用 `uv run respirascope --no-browser`。未安装浏览器或自动打开失败时，可手动访问打印的 `Open Console` 地址。
 
 默认访问地址：
 
@@ -437,7 +441,7 @@ PyInstaller 按当前系统打包，Windows exe 必须在 Windows 上生成，�
 [RespiraScope] Open Console: http://127.0.0.1:5175
 ```
 
-在浏览器打开 `Open Console` 后面的地址即可使用；按 Ctrl+C 停止。
+服务就绪后会自动打开默认浏览器，也可手动访问 `Open Console` 后面的地址；按 Ctrl+C 停止。
 API 默认尝试 8000，网页默认尝试 5175；端口占用时向后寻找，连续候选都不可用时由系统分配。
 程序会保留已绑定的端口直至退出，网页配置同步使用实际端口，可同时打开多个实例。
 运行期间的端口调整不会改写 TOML。真实传感器的连接端口保持配置值；旧版模拟 TCP 端口被占用时跳过该服务并提示，浏览器独立模拟仍可使用。

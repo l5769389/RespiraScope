@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>RespiraScope</title>
+  <defs>
+    <linearGradient id="surface" x1="8" y1="4" x2="58" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1096A0"/>
+      <stop offset="1" stop-color="#075C73"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#surface)"/>
+  <path d="M17 18a21 21 0 0 1 35 14M47 46a21 21 0 0 1-35-14" stroke="#79D6DA" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M10 34h5c6 0 6-15 12-15s6 26 12 26 6-11 11-11h4" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
