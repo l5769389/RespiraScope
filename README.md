@@ -310,8 +310,8 @@ enabled = true
 enabled = true
 
 [record]
-pre_points = 1000
-post_points = 1000
+pre_points = 200
+post_points = 200
 ```
 
 关键配置说明：
@@ -324,7 +324,7 @@ post_points = 1000
 | `[console].enabled` | 是否启动 Web Console |
 | `[lab].enabled` | 是否显示模拟实验模式；仅在 mock 开启时生效 |
 | `[monitor].enabled` | 是否显示实时体验模式 |
-| `[record].pre_points` / `post_points` | 两种分箱共用的前后原始缓冲点数，默认各 1000 点（50 Hz 下各 20 秒）；重启生效，不足时取已有数据 |
+| `[record].pre_points` / `post_points` | 两种分箱共用的前后原始缓冲点数，默认各 200 点（50 Hz 下各 4 秒）；重启生效，不足时取已有数据 |
 
 真实设备模式下，把 `[mock].enabled` 设置为 `false`。此时后端不会启动模拟 TCP server，也不会注册 `/mock/*` 路由，Web Console 中的模拟实验模式会隐藏。
 
@@ -483,4 +483,4 @@ uv run pytest
 
 本项目使用 [MIT License](LICENSE) 开源。
 
-缓冲配置修改后重启生效。录制前后各保存两种模式所需点数的最大值，离线分析按模式从完整原始记录中取用对应上下文；数据不足时使用已有部分，不补点、不强制阻止开始记录。允许配置为 0。旧配置 `pre_points` / `post_points` 作为各模式未配置时的兼容回退。
+缓冲配置修改后重启生效。时间和幅值分箱共用 `[record].pre_points` / `post_points`，默认各 200 点；数据不足时使用已有部分，不补点。允许配置为 0。旧配置仅有模式专用字段时，前后分别取两种配置的较大值；显式公共字段优先。

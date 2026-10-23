@@ -12,8 +12,8 @@ from ct_breath.breath_process.offline_quality import filter_offline
 from ct_breath.http.schemas import FilterConfig, normalize_filter_config
 
 
-def test_default_capture_keeps_short_amplitude_record_usable():
-    system = BreathProcessSystem(AppConfig())
+def test_configured_long_context_keeps_legacy_bandpass_record_usable():
+    system = BreathProcessSystem(AppConfig(record_pre_points=1000, record_post_points=1000))
     manager = system.record_manager
     t = np.arange(15000)/50
     p = 2*np.pi*.3*t
@@ -79,5 +79,5 @@ def test_filter_change_keeps_configured_context_and_history():
     old = list(manager.raw_pre_buffer)
     system.update_filter_config(normalize_filter_config(FilterConfig(
         processing_mode='amplitude',bandpass_mode='custom',lowpass_cutoff=.01,highpass_cutoff=2)))
-    assert manager.pre_points == 1000
+    assert manager.pre_points == 200
     assert list(manager.raw_pre_buffer) == old

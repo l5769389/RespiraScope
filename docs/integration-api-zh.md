@@ -407,8 +407,8 @@ BPM 和呼吸稳定性指标。
       }
     },
     "record": {
-      "pre_points": 1000,
-      "post_points": 1000,
+      "pre_points": 200,
+      "post_points": 200,
       "recording": false,
       "post_recording": false,
       "record_complete": false,
@@ -664,8 +664,8 @@ BPM 和呼吸稳定性指标。
   "message": "Record started",
   "data": {
     "record": {
-      "pre_points": 1000,
-      "post_points": 1000,
+      "pre_points": 200,
+      "post_points": 200,
       "recording": true,
       "post_recording": false,
       "record_complete": false,
@@ -885,8 +885,8 @@ BPM 和呼吸稳定性指标。
     "duration_seconds": 48.0
   },
   "record_padding": {
-    "pre_points": 1000,
-    "post_points": 1000
+    "pre_points": 200,
+    "post_points": 200
   }
 }
 ```
@@ -1286,7 +1286,7 @@ curl -X POST http://127.0.0.1:8000/record/save \
 `analysis.totalBins` 可选 4、6、8、10、12、16、20，默认 10；吸气和呼气各占一半。保存接口对其他数量返回 422，旧文件缺少该字段时按 10 箱导入。
 
 
-记录缓冲：`/runtime/config` 的 `record.filter_padding.time` / `.amplitude` 返回各模式的 `pre_points`、`post_points`；前端运行配置对应 `record.filterPadding` 的驼峰字段。默认时间模式各 250 点、幅值模式各 1000 点。`record.pre_points` / `post_points` 仍为采集容量，取两种模式分别的最大值。配置修改后重启生效，不按滤波参数自动扩大；已有数据不足时使用实际部分。
+记录缓冲：`/runtime/config` 的 `record.pre_points` / `post_points` 返回两种分箱共用的前后缓冲，默认各 200 点（50 Hz 下各 4 秒）。兼容字段 `record.filter_padding.time` / `.amplitude` 返回相同数值；前端运行配置对应 `record.prePoints` / `postPoints` 及 `record.filterPadding`。旧配置仅有模式专用字段时，前后分别取较大值，显式公共字段优先。配置修改后重启生效，不按滤波参数自动扩大；数据不足时使用已有部分。
 
 `POST /applyFilter` 可额外提供 `record_start_sequence`、`record_end_sequence`（闭区间，非负整数，必须同时提供，起点不大于终点）。提供时按当前模式配置从 `raw_data` 中取对应缓冲范围；省略时仍处理完整输入，保持预览和旧调用兼容。记录页面切换/重新滤波发送这两个字段；原始数据保留完整采集上下文，返回滤波数据仅包含本次实际使用范围。`POST /record/end` 与 `/record/save` 使用相同的模式缓冲规则。
 

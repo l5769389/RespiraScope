@@ -61,10 +61,10 @@ enabled = true
 enabled = true
 
 [record]
-# Shared offline context in samples; loaded on startup. At 50 Hz: 1000=20s.
+# Shared offline context in samples; loaded on startup. At 50 Hz: 200=4s.
 # Use available samples when acquisition context is shorter.
-pre_points = 1000
-post_points = 1000
+pre_points = 200
+post_points = 200
 # Server-side root for temporary session record files.
 storage_root = "{record_storage_root}"
 
@@ -102,10 +102,10 @@ class AppConfig:
     # Shared settings; None migrates legacy mode fields using their per-side maximum.
     record_pre_points: int | None = None
     record_post_points: int | None = None
-    record_time_pre_points: int = 250
-    record_time_post_points: int = 250
-    record_amplitude_pre_points: int = 1000
-    record_amplitude_post_points: int = 1000
+    record_time_pre_points: int = 200
+    record_time_post_points: int = 200
+    record_amplitude_pre_points: int = 200
+    record_amplitude_post_points: int = 200
     record_storage_root: Path = DEFAULT_RECORD_STORAGE_ROOT
     session_idle_timeout_seconds: int = 14400
     public_base_path: str = ""
