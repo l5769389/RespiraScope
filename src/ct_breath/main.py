@@ -123,7 +123,7 @@ def run_reloading_backend(config):
             process.wait()
 
 
-def main(argv=None):
+def main(argv=None, *, desktop=False):
     args = parse_args(argv)
     if args.reload and getattr(sys, "frozen", False):
         print("--reload is only supported when running from Python source, not the packaged executable.", file=sys.stderr)
@@ -137,6 +137,8 @@ def main(argv=None):
     from ct_breath.ports import is_port_available, reserve_listener
 
     config = with_runtime_ports(get_config(), backend_port=args.port, console_port=args.ui_port)
+    if desktop and not config.console_enabled:
+        raise RuntimeError('Desktop mode requires [console].enabled = true in the configuration file.')
     print_start_banner()
     warnings = []
     frontends = []
@@ -189,7 +191,7 @@ def main(argv=None):
             else:
                 warnings.append("Breath Console is disabled in [console].enabled.")
 
-            if console_url and not args.no_browser:
+            if console_url and not args.no_browser and not desktop:
                 from ct_breath.browser_launch import start_browser_when_ready
 
                 # The launcher owns this worker so --reload never opens another tab.
@@ -210,9 +212,14 @@ def main(argv=None):
 
             server = ReadyServer(uvicorn.Config(
                 create_socket_app(config), host=config.backend_host, port=config.backend_port,
-                log_level="warning", access_log=False,
+                log_level="warning", access_log=False, timeout_graceful_shutdown=5,
             ))
-            server.run(sockets=[backend_socket])
+            if desktop:
+                from ct_breath.desktop import run_desktop
+
+                run_desktop(server, [backend_socket], console_url)
+            else:
+                server.run(sockets=[backend_socket])
             return 0 if server.started else 1
         finally:
             stop_static_frontends(frontends)

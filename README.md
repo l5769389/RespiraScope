@@ -434,14 +434,11 @@ dist/RespiraScope.exe
 首次打包需要联网下载 Python 和依赖；运行生成的 exe 不需要安装 Python、uv 或 Node.js。
 PyInstaller 按当前系统打包，Windows exe 必须在 Windows 上生成，不能直接在 macOS/Linux 上交叉打包。
 
-双击 `dist/RespiraScope.exe` 后保留控制台，服务就绪时打印实际网页地址，例如：
+双击 `dist/RespiraScope.exe` 直接打开独立桌面窗口，显示 RespiraScope 图标；不弹出命令行窗口，也不打开浏览器。关闭应用窗口时，后台采集与网页服务一起停止。请先保存需要保留的记录。
 
-```text
-[RespiraScope] Backend API: http://127.0.0.1:8000
-[RespiraScope] Open Console: http://127.0.0.1:5175
-```
+Windows 桌面版使用 Edge WebView2，需要安装 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。界面和滤波功能沿用现有实现，支持记录导入与下载保存。配置中的 `[console].enabled` 需保持 `true`。
 
-服务就绪后会自动打开默认浏览器，也可手动访问 `Open Console` 后面的地址；按 Ctrl+C 停止。
+运行日志保存在 `%LOCALAPPDATA%\RespiraScope\logs\`，启动失败会弹窗提示并提供日志路径。源码开发启动仍使用终端和浏览器。
 API 默认尝试 8000，网页默认尝试 5175；端口占用时向后寻找，连续候选都不可用时由系统分配。
 程序会保留已绑定的端口直至退出，网页配置同步使用实际端口，可同时打开多个实例。
 运行期间的端口调整不会改写 TOML。真实传感器的连接端口保持配置值；旧版模拟 TCP 端口被占用时跳过该服务并提示，浏览器独立模拟仍可使用。

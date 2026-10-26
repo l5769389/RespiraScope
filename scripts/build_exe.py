@@ -27,7 +27,7 @@ def build_command(root: Path, onedir: bool, app_bundle: bool) -> list[str]:
         "PyInstaller",
         "--clean",
         "--noconfirm",
-        "--console",
+        "--windowed" if sys.platform == "win32" else "--console",
         mode,
         "--name",
         "RespiraScope",

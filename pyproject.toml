@@ -19,6 +19,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
+    "pywebview>=6.0,<7.0; sys_platform == 'win32'",
     "fastapi>=0.116.1,<0.117.0",
     "matplotlib>=3.10.6,<4.0.0",
     "numpy>=2.3.3,<3.0.0",

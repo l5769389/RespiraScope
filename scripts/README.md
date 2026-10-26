@@ -34,8 +34,10 @@ installed. Build on Windows: PyInstaller does not cross-compile Windows exe
 files from macOS/Linux. The PowerShell wrapper remains available for automation
 and returns the build exit code without pausing.
 
-Launch the exe and open the `Open Console` URL printed once the API is ready.
-Keep the console open; Ctrl+C stops the service. Both API and UI ports are bound
+Launch the exe to open the standalone desktop window, with no terminal or browser.
+Windows needs Microsoft Edge WebView2 Runtime. Closing the window stops the
+services; save any records first. Logs are written to `%LOCALAPPDATA%/RespiraScope/logs/`,
+and startup failures show a native error dialog. Both API and UI ports are bound
 before use, with automatic fallback if occupied (including multiple instances).
 The runtime frontend config receives the actual ports; TOML is not rewritten.
 Windows defaults to `%LOCALAPPDATA%/RespiraScope/` for config and records and
