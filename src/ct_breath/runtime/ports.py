@@ -9,6 +9,16 @@ def _socket_family(host: str) -> socket.AddressFamily:
     return socket.AF_INET
 
 
+def _has_listener(host: str, port: int) -> bool:
+    # Wildcard addresses are bind targets; probe their loopback address.
+    probe_host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)
+    try:
+        with socket.create_connection((probe_host, port), timeout=0.2):
+            return True
+    except OSError:
+        return False
+
+
 def reserve_listener(
     host: str, preferred_port: int, *, max_attempts: int = 100,
     excluded_ports: set[int] | None = None,
@@ -23,6 +33,10 @@ def reserve_listener(
     candidates = range(preferred_port, min(preferred_port + max_attempts + 1, 65536)) if preferred_port > 0 else ()
     for port in [*candidates, *([0] * 100)]:
         if port and port in excluded:
+            continue
+        # On Windows, binding a specific address can succeed beside an
+        # existing non-exclusive wildcard listener. Do not shadow that service.
+        if port and _has_listener(bind_host, port):
             continue
         listener = socket.socket(_socket_family(bind_host), socket.SOCK_STREAM)
         try:
@@ -53,12 +67,8 @@ def is_port_available(host: str, port: int) -> bool:
     bind_host = host or "0.0.0.0"
     # Some systems allow SO_REUSEADDR listeners on both wildcard and loopback
     # addresses. A successful bind alone can then hide an existing service.
-    probe_host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(bind_host, bind_host)
-    try:
-        with socket.create_connection((probe_host, port), timeout=0.2):
-            return False
-    except OSError:
-        pass
+    if _has_listener(bind_host, port):
+        return False
     try:
         with closing(socket.create_server((bind_host, port), family=_socket_family(bind_host))):
             return True
