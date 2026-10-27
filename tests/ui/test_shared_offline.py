@@ -1,3 +1,4 @@
+from tests.support.storage import stored_bins
 import json
 import math
 from test_record_analysis import chart_data, wait_ready
@@ -45,7 +46,7 @@ def test_switch_reuses_signal_and_preserves_custom_parameters_bounds_and_export(
     assert payload['filterConfig']['processing_mode'] == 'amplitude'
     assert payload['filterConfig']['gaussian_sigma'] == 2.2
     assert payload['processingQuality'] == result['processingQuality']
-    assert payload['respiratoryBins']
+    assert stored_bins(payload)
     assert 'timeFilterOverrides' not in payload and 'amplitudeFilterOverrides' not in payload
     page.locator('#loadRecordInput').set_input_files(saved)
     page.wait_for_function("document.querySelector('#recordFileValue').textContent==='saved.json'")

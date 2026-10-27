@@ -1,3 +1,4 @@
+from tests.support.storage import stored_bins
 import pytest
 
 
@@ -90,10 +91,63 @@ def test_fixed_bin_export_contains_empty_bands_and_extremum_flags(page, ui_serve
     {'basis':'amplitude','amplitudeMode':'fixed','lower':5,'upper':20,'inhaleRising':False},
 ])
 def test_frontend_and_backend_export_identical_bins(page, ui_server, options):
-    from ct_breath.breath_process.record_manager import RecordManager
-    from ct_breath.http.schemas import FilterConfig
+    from ct_breath.recording.manager import RecordManager
+    from ct_breath.models import FilterConfig
     manager = RecordManager()
     manager.record_start_sequence, manager.record_end_sequence = 0,100
     payload = manager.build_record_data(FilterConfig(), filtered_data=SOURCE['filtered'],
         peak_data=SOURCE['peaks'], valley_data=SOURCE['valleys'], analysis=options)
-    assert compute(page, ui_server, options) == payload['respiratoryBins']
+    assert compute(page, ui_server, options) == stored_bins(payload)
+
+
+@pytest.mark.parametrize('case', ['trailing', 'leading', 'masked', 'turn', 'masked_turn', 'reversal', 'unanchored', 'multiple', 'flat'])
+@pytest.mark.parametrize('basis', ['time','amplitude'])
+def test_partial_binning_matches_python_and_excludes_artifacts(page, ui_server, case, basis):
+    from tests.support.binning import triangle, missed_turn, compute as backend_compute, FIXED
+    source=triangle()
+    if case=='leading': source['valleys']=[[100,0]]
+    if case=='masked': source['processingQuality']={'invalidIntervals':[{'start':76,'end':101,'reason':'motion'}]}
+    if case in ('turn','masked_turn','reversal'):
+        source=missed_turn()
+        if case=='masked_turn': source['processingQuality']={'invalidIntervals':[{'start':45,'end':56,'reason':'motion'}]}
+        if case=='reversal': source['peaks']=[[0,50]]
+    if case=='unanchored': source['valleys']=[];source['peaks']=[]
+    if case=='multiple': source={'filtered':[[i,abs((i%100)-50)] for i in range(201)],'peaks':[[0,50],[200,50]],'valleys':[]}
+    if case=='flat': source={'filtered':[[i,50] for i in range(100)],'peaks':[[0,50]],'valleys':[]}
+    options={**FIXED,'basis':basis}
+    actual=compute(page,ui_server,options,source)
+    expected=backend_compute(source,options)
+    assert actual==expected
+    if basis=='amplitude' and case in ('trailing','masked','turn','reversal'):
+        assert any(b['direction']=='exhale' for b in actual)
+    assert all(not (b['start']<iv['end'] and b['end']>iv['start']) for b in actual
+        for iv in source.get('processingQuality',{}).get('invalidIntervals',[]))
+
+
+def test_partial_exhalation_is_plotted_and_exported_without_new_states(page, ui_server, tmp_path):
+    import json
+    from tests.support.binning import triangle, FIXED, compute as backend_compute
+    source=triangle()
+    source.update(raw=source['filtered'],startSeq=0,endSeq=100,startAt=1700000000000,endAt=1700000002000,
+                  analysis=FIXED,processingQuality={'version':2,'baselines':[],
+                      'invalidIntervals':[{'start':76,'end':101,'reason':'motion'}]})
+    fixture=tmp_path/'partial-breath.json';fixture.write_text(json.dumps(source))
+    page.goto(ui_server['ui']+'/monitor/')
+    page.locator('#loadRecordInput').set_input_files(fixture)
+    page.wait_for_function("document.querySelector('#recordFileValue').textContent==='partial-breath.json'")
+    page.locator('#recordSection').scroll_into_view_if_needed()
+    plotted=page.locator('#recordChart').evaluate("el=>echarts.getInstanceByDom(el).getOption().series.find(s=>s.id==='record-bins').data")
+    assert len(plotted)==8
+    with page.expect_download() as download:
+        page.locator('#saveRecordBtn').click()
+    saved=tmp_path/'saved-partial.json';download.value.save_as(saved)
+    payload=json.loads(saved.read_text())
+    assert stored_bins(payload)==backend_compute(source)
+    assert all(set(b)=={'start','end','direction','bin'} for b in stored_bins(payload))
+    assert payload['raw']==source['raw']
+    page.locator('#recordSection').screenshot(path=str(tmp_path/'fixed-partial.png'))
+    page.locator('#analysis-basis').select_option('time')
+    with page.expect_download() as download:
+        page.locator('#saveRecordBtn').click()
+    saved=tmp_path/'saved-time.json';download.value.save_as(saved)
+    assert all(b['direction']=='inhale' for b in stored_bins(json.loads(saved.read_text())))

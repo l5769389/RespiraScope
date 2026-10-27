@@ -6,7 +6,7 @@
 
 ```bash
 uv sync
-uv run pytest
+uv run pytest tests/unit tests/integration
 uv run python scripts/dev.py
 ```
 
@@ -15,6 +15,20 @@ Windows 下也可以使用：
 ```powershell
 .\scripts\dev.ps1
 ```
+
+## 代码组织与验证
+
+代码目录及依赖约定见[项目结构](docs/development/project-layout.md)。公共数据模型放在 `models/`，接口适配放在 `api/`；处理算法不依赖 HTTP 或桌面启动模块。通用测试辅助函数放在 `tests/support/`，不要从其他测试模块导入。
+
+浏览器测试单独运行，需要先安装浏览器：
+
+```bash
+uv sync --group ui-test
+uv run --group ui-test playwright install chromium
+uv run --group ui-test pytest tests/ui
+```
+
+也可设置 `BROWSER_CHANNEL=chrome` 使用已安装的 Chrome。修改资源路径时，应同时验证 wheel 和桌面打包的资源定位。报告测算和打包命令见[脚本说明](scripts/README.md)。
 
 ## 提交建议
 

@@ -6,10 +6,14 @@ import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 import urllib.request
 from contextlib import closing
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 
 
 @pytest.fixture(scope='session')

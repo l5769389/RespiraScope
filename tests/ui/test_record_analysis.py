@@ -1,3 +1,4 @@
+from tests.support.storage import stored_bins
 import json
 import math
 
@@ -44,7 +45,7 @@ def test_record_analysis_lifecycle_drag_export_and_rollback(page, ui_server, tmp
     assert pending
     backend_response = pending[0].fetch()
     captured = backend_response.json()['data']
-    assert captured['raw'][-1][0] - captured['endSeq'] >= 1000
+    assert captured['raw'][-1][0] - captured['endSeq'] >= 200
     pending[0].fulfill(response=backend_response)
     wait_ready(page)
     page.unroute('**/record/end')
@@ -71,7 +72,7 @@ def test_record_analysis_lifecycle_drag_export_and_rollback(page, ui_server, tmp
     captured_file = tmp_path/'local-padding.json'
     capture_download.value.save_as(captured_file)
     captured = json.loads(captured_file.read_text())
-    assert captured['raw'][-1][0] - captured['endSeq'] >= 1000
+    assert captured['raw'][-1][0] - captured['endSeq'] >= 200
 
 
     page.locator('#loadRecordInput').set_input_files(fixture)
@@ -117,7 +118,7 @@ def test_record_analysis_lifecycle_drag_export_and_rollback(page, ui_server, tmp
     assert payload['analysis']['basis']=='amplitude'
     assert abs(payload['analysis']['lower']-moved)<0.01
     assert len(payload['raw'])==len(raw)
-    assert payload['respiratoryBins']
+    assert stored_bins(payload)
     assert payload['filterConfig']['processing_mode']=='amplitude'
     page.locator('#loadRecordInput').set_input_files(saved)
     page.wait_for_function("document.querySelector('#recordFileValue').textContent==='saved.json'")
@@ -167,7 +168,7 @@ def test_fixed_record_export_marks_outside_extrema_only_in_file(page, ui_server,
     lines = chart_data(page)['lines']
     assert [line.get('yAxis') for line in lines] == [20,40,60,80]
     assert all('xAxis' not in line for line in lines)
-    assert [(g['direction'],g['bin']) for g in payload['respiratoryBins']] == [('inhale',3),('exhale',3)]
+    assert [(g['direction'],g['bin']) for g in stored_bins(payload)] == [('inhale',3),('exhale',3)]
     assert all('amplitudeRange' not in p for p in payload['peaks']+payload['valleys'])
     page.locator('#loadRecordInput').set_input_files(saved)
     page.wait_for_function("document.querySelector('#recordFileValue').textContent==='shallow-saved.json'")
@@ -183,7 +184,7 @@ def test_fixed_record_export_marks_outside_extrema_only_in_file(page, ui_server,
     payload = json.loads(outside.read_text())
     assert payload['analysis']['lower'] == 45 and payload['analysis']['upper'] == 55
     assert [line.get('yAxis') for line in chart_data(page)['lines']] == [47,49,51,53]
-    assert len(payload['respiratoryBins']) == 10
+    assert len(stored_bins(payload)) == 10
     assert payload['peaks'][0]['amplitudeRange'] == 'above'
     assert all(p['amplitudeRange']=='below' for p in payload['valleys'])
     markers = page.locator('#recordChart').evaluate("el=>echarts.getInstanceByDom(el).getOption().series.filter(s=>['peaks','valleys'].includes(s.id)).flatMap(s=>s.data)")

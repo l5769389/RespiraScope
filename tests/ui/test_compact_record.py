@@ -1,11 +1,12 @@
+from tests.support.storage import stored_bins
 import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from ct_breath.breath_process.record_manager import RecordManager
-from ct_breath.http.schemas import FilterConfig
+from ct_breath.recording.manager import RecordManager
+from ct_breath.models import FilterConfig
 
 
 @pytest.mark.parametrize('legacy', [True, False])
@@ -39,7 +40,7 @@ def test_record_migration_and_roundtrip_preserve_data(page, ui_server, tmp_path,
     saved = tmp_path/'compact.json'
     download.value.save_as(saved)
     payload = json.loads(saved.read_text())
-    assert payload['version'] == 5
+    assert payload['version'] == 6
     assert len(saved.read_bytes()) < len(json.dumps(original, indent=2).encode()) * .5
     assert [p[:2] for p in payload['raw']] == points
     assert [p[2] for p in payload['raw']] == [p['timestamp'] for p in original['raw_data']]
@@ -50,7 +51,7 @@ def test_record_migration_and_roundtrip_preserve_data(page, ui_server, tmp_path,
     assert payload['scans'] == [{'index':1,'startSeq':20,'endSeq':80,
                                'startTime':original['scans'][0]['start_time'],
                                'endTime':original['scans'][0]['end_time']}]
-    assert payload['respiratoryBins'] == original['respiratoryBins']
+    assert stored_bins(payload) == stored_bins(original)
     assert payload['peaks'] == [{'sequence':50,'value':50,'amplitudeRange':'above'}]
     assert 'binning' not in payload and 'metrics' not in payload
     assert 'moving_avg_window' not in payload['filterConfig']

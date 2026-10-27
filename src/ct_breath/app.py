@@ -8,14 +8,14 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
-from ct_breath.breath_process.breath_process_manager import breath_system
-from ct_breath.config import AppConfig, get_config
-from ct_breath.http.http_service import create_routes
-from ct_breath.logger import logger
-from ct_breath.mock_sensor.async_sensor import async_sensor_start
-from ct_breath.ports import is_port_available
-from ct_breath.session import SessionManager
-from ct_breath.socket_io_service import set_session_touch_callback, sio
+from ct_breath.application.service import breath_system
+from ct_breath.core.config import AppConfig, get_config
+from ct_breath.api.http import create_routes
+from ct_breath.core.logging import logger
+from ct_breath.acquisition.mock_server import async_sensor_start
+from ct_breath.runtime.ports import is_port_available
+from ct_breath.application.sessions import SessionManager
+from ct_breath.api.websocket import set_session_touch_callback, sio
 
 
 def lifespan_for(app_config: AppConfig):

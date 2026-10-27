@@ -1,7 +1,38 @@
+from tests.support.storage import stored_bins
 import json
 import math
 
 from test_record_analysis import wait_ready
+
+
+def test_short_normal_interval_survives_mode_switch_and_export(page, ui_server, tmp_path):
+    raw = [[i, 180+80*math.cos(2*math.pi*.25*i/50)
+            +(400 if 1000 <= i < 1100 or 1390 <= i < 1500 else 0)] for i in range(2500)]
+    result = page.request.post(ui_server['api']+'/applyFilter', data={
+        'raw_data':raw, 'filter_config':{'offline_filter':'baseline_lowpass'},
+    }).json()
+    source = tmp_path/'short-normal.json'
+    source.write_text(json.dumps({'version':5,'raw':raw,'filtered':result['data'],
+        'peaks':result['peak'],'valleys':result['valley'],'filterConfig':result['filter_config'],
+        'processingQuality':result['processingQuality'],'startSeq':300,'endSeq':2200,
+        'analysis':{'basis':'time','amplitudeMode':'fixed','lower':100,'upper':250}}))
+    page.goto(ui_server['ui']+'/monitor/')
+    page.locator('#loadRecordInput').set_input_files(source)
+    page.locator('#recordSection').wait_for(state='visible')
+    for mode in ('time','amplitude'):
+        page.locator('#analysis-basis').select_option(mode)
+        wait_ready(page)
+        with page.expect_download() as download:
+            page.locator('#saveRecordBtn').click()
+        target = tmp_path/f'short-{mode}.json'
+        download.value.save_as(target)
+        saved = json.loads(target.read_text())
+        assert saved['raw'] == raw and saved['filtered'] == result['data']
+        assert saved['processingQuality'] == result['processingQuality']
+        middle = [b for b in stored_bins(saved) if 1100 < b['start'] < b['end'] < 1390]
+        assert any(b['direction']=='exhale' for b in middle)
+        assert all(not (b['start'] < i['end'] and b['end'] > i['start'])
+                   for b in stored_bins(saved) for i in saved['processingQuality']['invalidIntervals'])
 
 
 def test_quality_survives_import_redetection_refilter_and_export(page, ui_server, tmp_path):
@@ -26,8 +57,8 @@ def test_quality_survives_import_redetection_refilter_and_export(page, ui_server
         download.value.save_as(target)
         data = json.loads(target.read_text())
         assert data['processingQuality']['invalidIntervals']
-        assert data['respiratoryBins']
-        for b in data['respiratoryBins']:
+        assert stored_bins(data)
+        for b in stored_bins(data):
             assert not any(b['start'] < i['end'] and b['end'] > i['start']
                            for i in data['processingQuality']['invalidIntervals'])
         assert data['raw'] == raw
@@ -133,7 +164,7 @@ def test_local_cough_keeps_normal_bins_after_refilter_and_export(page, ui_server
         with page.expect_download() as download:
             page.locator('#saveRecordBtn').click()
         target=tmp_path/f'{mode}-cough.json';download.value.save_as(target)
-        saved=json.loads(target.read_text());bins=saved['respiratoryBins']
+        saved=json.loads(target.read_text());bins=stored_bins(saved)
         invalid=saved['processingQuality']['invalidIntervals']
         assert saved['raw']==raw
         assert any(2100<b['start']<b['end']<2400 for b in bins)

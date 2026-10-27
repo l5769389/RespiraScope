@@ -1,7 +1,7 @@
 import os
 
 from ct_breath.app import create_socket_app
-from ct_breath.config import get_config, with_runtime_ports
+from ct_breath.core.config import get_config, with_runtime_ports
 
 
 def backend_port_from_argv(argv: list[str] | None = None) -> int | None:

@@ -1,9 +1,10 @@
+from tests.support.storage import stored_bins
 import json
 
 import pytest
 
-from ct_breath.breath_process.record_manager import RecordManager
-from ct_breath.http.schemas import FilterConfig
+from ct_breath.recording.manager import RecordManager
+from ct_breath.models import FilterConfig
 from test_record_analysis import chart_data
 
 
@@ -40,13 +41,9 @@ def test_bin_count_updates_chart_and_roundtrips_without_refilter(page, ui_server
         exported = json.loads(saved.read_text())
         assert exported['analysis']['totalBins'] == total
         expected = manager.build_record_data(config, filtered_data=points, peak_data=[[50,50]],
-            valley_data=[[0,0],[100,0]], analysis={**analysis,'totalBins':total})['respiratoryBins']
-        assert len(exported['respiratoryBins']) == len(expected)
-        for actual, wanted in zip(exported['respiratoryBins'], expected):
-            assert actual['direction'] == wanted['direction']
-            assert actual['bin'] == wanted['bin']
-            assert actual['start'] == pytest.approx(wanted['start'])
-            assert actual['end'] == pytest.approx(wanted['end'])
+            valley_data=[[0,0],[100,0]], analysis={**analysis,'totalBins':total})['binningData']
+        assert exported['binningData'] == expected
+        assert len(exported['binningData']['bins']['inhale']) == len(exported['binningData']['bins']['exhale']) == total//2
     assert not any(url.endswith(('/applyFilter','/detectPeaks')) for url in requests)
     page.locator('#loadRecordInput').set_input_files(saved)
     page.wait_for_function("document.querySelector('#recordFileValue').textContent === '20-bins.json'")

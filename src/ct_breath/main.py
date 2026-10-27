@@ -46,7 +46,7 @@ def choose_runtime_port(
     name: str, host: str, preferred_port: int, warnings: list[str], *,
     excluded_ports: set[int] | None = None,
 ) -> int:
-    from ct_breath.ports import find_available_port
+    from ct_breath.runtime.ports import find_available_port
 
     selected_port = find_available_port(host, preferred_port, excluded_ports=excluded_ports)
     if selected_port != preferred_port:
@@ -55,7 +55,7 @@ def choose_runtime_port(
 
 
 def print_startup_summary(config, console_url: str | None, warnings: list[str]):
-    from ct_breath.frontend_static import endpoint_text
+    from ct_breath.runtime.static_server import endpoint_text
 
     print_status(f"Config: {config.config_path}")
     print_status(endpoint_text("Backend API", config.backend_host, config.backend_port))
@@ -83,7 +83,7 @@ def print_startup_summary(config, console_url: str | None, warnings: list[str]):
 
 
 def try_start_frontend(directory: str, host: str, port: int, name: str, config, *, sock=None):
-    from ct_breath.frontend_static import endpoint_text, start_static_frontend
+    from ct_breath.runtime.static_server import endpoint_text, start_static_frontend
 
     try:
         return start_static_frontend(directory, host, port, name, config, sock=sock)
@@ -132,9 +132,9 @@ def main(argv=None, *, desktop=False):
         os.environ["RESPIRASCOPE_CONFIG"] = str(args.config.expanduser().resolve())
     # Resolve the selected configuration before importing modules with runtime singletons.
     import uvicorn
-    from ct_breath.config import get_config, with_runtime_ports
-    from ct_breath.frontend_static import endpoint_url, stop_static_frontends
-    from ct_breath.ports import is_port_available, reserve_listener
+    from ct_breath.core.config import get_config, with_runtime_ports
+    from ct_breath.runtime.static_server import endpoint_url, stop_static_frontends
+    from ct_breath.runtime.ports import is_port_available, reserve_listener
 
     config = with_runtime_ports(get_config(), backend_port=args.port, console_port=args.ui_port)
     if desktop and not config.console_enabled:
@@ -180,7 +180,7 @@ def main(argv=None, *, desktop=False):
         try:
             if config.console_enabled:
                 frontend = try_start_frontend(
-                    "frontend-console", config.console_host, config.console_port,
+                    "console", config.console_host, config.console_port,
                     "Breath Console", config, sock=console_socket,
                 )
                 if frontend:
@@ -192,7 +192,7 @@ def main(argv=None, *, desktop=False):
                 warnings.append("Breath Console is disabled in [console].enabled.")
 
             if console_url and not args.no_browser and not desktop:
-                from ct_breath.browser_launch import start_browser_when_ready
+                from ct_breath.runtime.browser import start_browser_when_ready
 
                 # The launcher owns this worker so --reload never opens another tab.
                 listeners.callback(start_browser_when_ready(
@@ -215,7 +215,7 @@ def main(argv=None, *, desktop=False):
                 log_level="warning", access_log=False, timeout_graceful_shutdown=5,
             ))
             if desktop:
-                from ct_breath.desktop import run_desktop
+                from ct_breath.runtime.desktop import run_desktop
 
                 run_desktop(server, [backend_socket], console_url)
             else:

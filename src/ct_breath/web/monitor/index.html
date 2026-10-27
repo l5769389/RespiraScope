@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Breath Monitor</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/logo.svg" />
+    <link rel="alternate icon" href="../assets/logo.ico" />
+    <link rel="stylesheet" href="./styles.css?v=monitor-shared-offline-20261023" />
+    <link rel="stylesheet" href="../shared/theme.css" />
+  </head>
+  <body class="monitor-app">
+    <main class="monitor-shell">
+      <section class="control-strip" aria-label="Realtime workflow controls">
+        <div class="control-group primary-group">
+          <span class="group-label" data-i18n="group.monitor">实时采集</span>
+          <button id="startBtn" data-i18n="button.startMonitoring">开始监测</button>
+          <button id="pauseBtn" class="secondary" data-i18n="button.pauseView">暂停视图</button>
+          <button id="resetBtn" class="secondary" data-i18n="button.reset">重置</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label" data-i18n="group.record">记录片段</span>
+          <button id="recordStartBtn" class="secondary" data-i18n="button.recordStart">开始记录</button>
+          <button id="recordEndBtn" class="secondary" data-i18n="button.recordEnd" disabled>结束记录</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label" data-i18n="group.scan">扫描标记</span>
+          <button id="scanStartBtn" class="secondary" data-i18n="button.scanStart" disabled>开始扫描</button>
+          <button id="scanEndBtn" class="secondary" data-i18n="button.scanEnd" disabled>结束扫描</button>
+        </div>
+        <div class="control-group">
+          <span class="group-label" data-i18n="group.file">记录文件</span>
+          <button id="loadRecordBtn" class="secondary" data-i18n="button.loadRecord">加载记录</button>
+          <input id="loadRecordInput" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
+
+      <section class="status-grid top-status-grid" aria-label="Data status">
+        <article id="connectionCard" class="connection-card" data-connection="idle">
+          <span data-i18n="statusPanel.status">数据状态</span>
+          <strong id="connectionStatus" data-status-key="connection.disconnected" aria-live="polite">未连接</strong>
+        </article>
+        <article class="metric-primary">
+          <span>BPM</span>
+          <strong id="bpmValue">-</strong>
+        </article>
+        <article>
+          <span data-i18n="statusPanel.stability">稳定性</span>
+          <strong id="qualityValue">-</strong>
+          <small id="stabilityHintValue" data-i18n="hint.waitingEnoughBreaths">等待足够呼吸周期</small>
+        </article>
+        <article>
+          <span data-i18n="statusPanel.intervalCv">间隔 CV</span>
+          <strong id="intervalCvValue">-</strong>
+          <small id="intervalCvHintValue" data-i18n="hint.intervalVariation">呼吸间隔的变化程度</small>
+        </article>
+        <article>
+          <span data-i18n="statusPanel.rawPoints">原始点数</span>
+          <strong id="rawCountValue">0</strong>
+        </article>
+        <article>
+          <span data-i18n="statusPanel.filteredPoints">滤波点数</span>
+          <strong id="filteredCountValue">0</strong>
+        </article>
+      </section>
+
+      <div class="monitor-layout">
+        <section class="chart-section realtime-section">
+          <div class="chart-header">
+            <div>
+              <h2 data-i18n="chart.realtimeTitle">实时波形</h2>
+              <p>灰色为原始输入，蓝色为滤波输出；红点和绿点分别表示识别到的波峰和波谷。</p>
+            </div>
+            <div class="chart-actions">
+              <button id="followBtn" class="secondary follow-toggle" type="button">回看波形</button>
+              <details class="advanced-tools">
+              <summary data-i18n="group.advanced">高级视图</summary>
+              <div class="chart-tools">
+                <label>
+                  <span data-i18n="field.smoothing">平滑</span>
+                  <select id="smoothingSelect">
+                    <option value="auto" selected data-i18n="smoothing.auto">自动</option>
+                    <option value="off" data-i18n="smoothing.off">关闭</option>
+                    <option value="light" data-i18n="smoothing.light">轻度</option>
+                    <option value="medium" data-i18n="smoothing.medium">中等</option>
+                    <option value="strong" data-i18n="smoothing.strong">强</option>
+                  </select>
+                </label>
+                <label class="checkbox-row">
+                  <input id="confirmRealtimeEvents" type="checkbox" />
+                  <span data-i18n="field.confirmPeaks">延迟确认峰谷</span>
+                </label>
+              </div>
+            </details>
+            </div>
+          </div>
+          <div class="legend">
+            <span class="legend-item raw" data-i18n="legend.raw">原始</span>
+            <span class="legend-item filtered" data-i18n="legend.filtered">滤波</span>
+            <span class="legend-item peak" data-i18n="legend.peak">波峰</span>
+            <span class="legend-item valley" data-i18n="legend.valley">波谷</span>
+            <span class="legend-item recorded" data-i18n="legend.recorded">记录区间</span>
+            <span class="legend-item scan" data-i18n="legend.scan">扫描区间</span>
+          </div>
+          <div id="waveChart" class="chart"></div>
+        </section>
+
+        <div class="runtime-values" aria-hidden="true">
+          <span id="windowValue">0 - 1500 samples</span>
+          <span id="recordFileValue" data-record-file-key="record.file.none">无已加载文件</span>
+          <span id="lastUpdateValue">-</span>
+        </div>
+      </div>
+
+      <section id="recordSection" class="chart-section record-section" hidden>
+        <div class="chart-header">
+          <h2 data-i18n="record.title">记录片段</h2>
+          <div class="record-meta">
+            <span id="recordStatus">空闲</span>
+            <span id="recordDuration">0s</span>
+            <span id="recordIndexRange">索引 -</span>
+            <span id="recordScanRange">扫描 -</span>
+            <span id="recordTimeRange">时间 -</span>
+            <span id="recordPointCount">0 点</span>
+          </div>
+          <div class="record-file-actions">
+            <button id="saveRecordBtn" class="secondary" data-i18n="button.saveRecord" disabled>保存记录</button>
+            <button id="binningDataBtn" class="secondary" type="button" disabled>分箱数据</button>
+            <button id="recordDetailBtn" class="secondary record-detail-btn" type="button" data-i18n="record.details">详情</button>
+          </div>
+        </div>
+        <div class="record-workspace">
+        <div class="record-analysis" aria-label="记录分箱设置">
+          <p id="extrema-parameterNote" class="analysis-mode-note"></p>
+          <fieldset class="analysis-binning-panel"><legend data-i18n="analysis.binningTitle">呼吸分箱</legend><div class="analysis-binning-fields">
+          <label><span data-i18n="analysis.basis">分箱依据</span>
+            <select id="analysis-basis"><option value="time" data-i18n="analysis.time">时间 based</option><option value="amplitude" data-i18n="analysis.amp">幅值 based</option></select>
+          </label>
+          <label><span data-i18n="analysis.totalBins">每周期分箱数</span><select id="analysis-totalBins"><option value="4">4</option><option value="6">6</option><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="16">16</option><option value="20">20</option></select></label>
+          <label id="analysis-amplitude" hidden><span data-i18n="analysis.mode">幅值分箱</span>
+            <select id="analysis-amplitudeMode"><option value="free" data-i18n="analysis.free">自由幅值（周期内相对幅值）</option><option value="fixed" data-i18n="analysis.fixed">固定幅值</option></select>
+          </label>
+          <label><span data-i18n="analysis.direction">吸气方向</span><select id="analysis-direction"><option value="rising" data-i18n="analysis.rising">信号上升</option><option value="falling" data-i18n="analysis.falling">信号下降</option></select></label>
+          <div id="analysis-bounds" class="analysis-bounds" hidden>
+            <label><span data-i18n="analysis.lower">幅值下界</span><input id="analysis-lower" type="number" step="0.1" /></label>
+            <label><span data-i18n="analysis.upper">幅值上界</span><input id="analysis-upper" type="number" step="0.1" /></label>
+            <span class="analysis-hint" data-i18n="analysis.drag">可上下拖动图中实线；界外数据不分箱。</span>
+          </div>
+          </div></fieldset>
+          <fieldset class="analysis-filter-panel"><legend data-i18n="analysis.filterTitle">离线低通滤波</legend>
+          <div class="analysis-filter-controls">
+            <div class="analysis-band-range lowpass-control">
+              <div class="analysis-band-heading">
+                <label for="analysis-bandHigh"><span id="analysis-bandHighLabel" data-i18n="analysis.bandHigh">低通上限频率</span><span class="analysis-band-readout"><output id="analysis-bandHighValue" for="analysis-bandHigh"></output><output id="analysis-bandHighBpm" for="analysis-bandHigh"></output></span></label>
+              </div>
+              <div id="analysis-bandTrack" class="analysis-band-track" data-lowpass="true">
+                <input id="analysis-bandHigh" type="range" min="0" max="1000" step="1" aria-labelledby="analysis-bandHighLabel" aria-describedby="analysis-bandScale" />
+              </div>
+            </div>
+            <label><span data-i18n="analysis.sensitivity">峰谷灵敏度</span><select id="analysis-sensitivity">
+              <option value="0.45" data-i18n="analysis.conservative">保守</option>
+              <option value="0.3" data-i18n="analysis.standard">标准</option>
+              <option value="0.15" data-i18n="analysis.sensitive">灵敏</option>
+              <option value="keep" hidden data-i18n="analysis.imported">保留文件设置</option>
+            </select></label>
+
+            <div class="analysis-help">
+              <span id="analysis-bandScale" data-i18n="analysis.bandScale">BPM = Hz × 60；方向键微调。</span>
+              <span id="analysis-filterHint">频率更改需重新滤波；灵敏度仅重判峰谷。</span>
+            </div>
+          </div></fieldset>
+          <div class="analysis-footer">
+            <div class="analysis-feedback"><span id="analysis-state" class="analysis-state" role="status"></span><p id="analysis-status" role="status"></p></div>
+            <div class="analysis-actions">
+              <button id="analysis-discard" class="secondary" type="button" data-i18n="analysis.discard" hidden>撤销修改</button>
+              <button id="analysis-reset" class="secondary" type="button" data-i18n="analysis.reset">恢复默认</button>
+              <button id="analysis-retry" type="button" data-i18n="analysis.refilter">应用设置</button>
+            </div>
+          </div>
+        </div>
+        <div class="record-wave-panel">
+        <div id="extrema-editor" class="extrema-editor">
+          <div class="extrema-editor-heading">
+            <div class="extrema-heading-text"><strong id="extrema-title">呼吸波形</strong><span id="extrema-mode" role="status">查看模式</span></div>
+            <div class="extrema-mode-actions">
+              <button id="extrema-edit" type="button">进入编辑</button>
+              <div class="extrema-exit-actions"><button id="extrema-cancel" class="secondary" type="button">取消并退出</button><button id="extrema-confirm" type="button">应用并退出</button></div>
+            </div>
+          </div>
+          <div class="extrema-status-row"><span id="extrema-summary"></span><span id="extrema-selection">已选 —</span></div>
+          <div class="extrema-mode-content">
+          <p id="extrema-overview"></p>
+          <div id="extrema-controls">
+            <div class="extrema-tools">
+              <div class="extrema-sample-field"><label for="extrema-sequence" id="extrema-label">采样序号</label><input id="extrema-sequence" type="number" step="1" inputmode="numeric" /></div>
+              <button id="extrema-place" class="secondary" type="button">添加标记</button>
+              <button id="extrema-undo" class="secondary" type="button">撤销一步</button>
+              <button id="extrema-restore" class="secondary" type="button">恢复自动标记</button>
+            </div>
+          </div>
+          </div>
+          <p id="extrema-hint"></p><p id="extrema-message" role="status"></p>
+        </div>
+        <div id="recordChart" class="chart record-chart" tabindex="0" aria-label="离线呼吸波形"></div>
+        </div>
+        </div>
+      </section>
+
+      <dialog id="binningDataDialog" class="binning-data-dialog" aria-labelledby="binningDataTitle">
+        <header class="binning-data-header">
+          <div><p class="binning-eyebrow">OFFLINE ANALYSIS</p><h3 id="binningDataTitle">分箱数据</h3></div>
+          <button id="binningDataClose" type="button" class="secondary">关闭</button>
+        </header>
+        <p id="binningDataIntro" class="binning-data-intro"></p>
+        <div id="binningDataSummary" class="binning-data-summary"></div>
+        <div class="binning-data-toolbar">
+          <div class="binning-data-tabs" role="group" aria-label="显示方式">
+            <button id="binningTableTab" type="button" class="secondary" aria-pressed="true">区间明细</button>
+            <button id="binningJsonTab" type="button" class="secondary" aria-pressed="false">存储 JSON</button>
+          </div>
+          <label id="binningStatusLabel"><span>状态</span><select id="binningStatusFilter"><option value="all">全部</option><option value="valid">有效</option><option value="excluded">排除</option><option value="unassigned">无法分箱</option></select></label>
+          <button id="binningDataDownload" type="button" class="secondary">导出分箱 JSON</button>
+        </div>
+        <section id="binningTablePanel">
+          <div class="binning-table-scroll"><table class="binning-data-table"><thead id="binningDataHead"></thead><tbody id="binningDataRows"></tbody></table></div>
+          <div class="binning-data-pagination"><span id="binningDataPage"></span><div><button id="binningDataPrev" class="secondary" type="button">上一页</button><button id="binningDataNext" class="secondary" type="button">下一页</button></div></div>
+        </section>
+        <section id="binningJsonPanel" hidden><p id="binningJsonHelp"></p><pre id="binningDataJson" tabindex="0"></pre></section>
+        <footer id="binningDataFooter"></footer>
+      </dialog>
+
+      <dialog id="recordDetailDialog" class="record-detail-dialog">
+        <section class="record-detail-sheet" aria-labelledby="recordDetailTitle">
+          <header>
+            <h3 id="recordDetailTitle" data-i18n="record.detailsTitle">记录详情</h3>
+            <button id="recordDetailCloseBtn" class="secondary icon-close-button" type="button" aria-label="关闭" title="关闭">
+              <span data-i18n="record.close">关闭</span>
+            </button>
+          </header>
+          <div class="record-detail-list">
+            <article>
+              <span data-i18n="record.detail.status">状态</span>
+              <strong id="recordDetailStatus">空闲</strong>
+            </article>
+            <article>
+              <span data-i18n="record.detail.duration">时长</span>
+              <strong id="recordDetailDuration">0s</strong>
+            </article>
+            <article>
+              <span data-i18n="record.detail.index">索引</span>
+              <strong id="recordDetailIndexRange">索引 -</strong>
+            </article>
+            <article>
+              <span data-i18n="record.detail.scan">扫描</span>
+              <strong id="recordDetailScanRange">扫描 -</strong>
+            </article>
+            <article>
+              <span data-i18n="record.detail.time">时间</span>
+              <strong id="recordDetailTimeRange">时间 -</strong>
+            </article>
+            <article>
+              <span data-i18n="record.detail.points">点数</span>
+              <strong id="recordDetailPointCount">0 点</strong>
+            </article>
+          </div>
+        </section>
+      </dialog>
+    </main>
+
+    <script src="../runtime-config.js"></script>
+    <script src="../shared/runtime.js?v=shared-runtime-20260605"></script>
+    <script src="../vendor/socket.io.min.js"></script>
+    <script src="../vendor/echarts.min.js"></script>
+    <script type="module" src="./app.js?v=monitor-shared-offline-20261023"></script>
+  </body>
+</html>

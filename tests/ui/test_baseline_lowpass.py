@@ -1,3 +1,4 @@
+from tests.support.storage import stored_bins
 import json
 import math
 
@@ -49,7 +50,7 @@ def test_offline_lowpass_switch_export_import_and_rollback(page, ui_server, tmp_
     assert data['filterConfig']['offline_filter']=='baseline_lowpass'
     assert data['filterConfig']['highpass_cutoff']==high
     assert data['processingQuality']['baselines'][0]['status']=='preserved'
-    assert data['raw']==raw and data['respiratoryBins']
+    assert data['raw']==raw and stored_bins(data)
     page.locator('#loadRecordInput').set_input_files(saved)
     page.wait_for_function("document.querySelector('#recordFileValue').textContent==='lowpass-saved.json'")
     assert page.locator('#analysis-bandHigh').is_visible()
@@ -103,7 +104,7 @@ def test_time_filter_switch_is_explicit_and_roundtrips(page, ui_server, tmp_path
     assert applied['filter_config']['processing_mode']=='time'
     assert applied['filter_config']['offline_filter']=='baseline_lowpass'
     assert applied['filter_config']['highpass_cutoff']==2
-    assert applied['data'][0][0]==500  # Both bases share the same 20 s context.
+    assert applied['data'][0][0]==1300  # Both bases use the default 200-point context.
     assert '时间分箱 · 保留基线低通' in page.locator('#analysis-status').inner_text()
     assert chart_data(page)['filtered']!=before
     assert page.locator('#analysis-bounds').is_hidden()
@@ -114,7 +115,7 @@ def test_time_filter_switch_is_explicit_and_roundtrips(page, ui_server, tmp_path
     exported=json.loads(saved.read_text())
     assert exported['analysis']['basis']=='time'
     assert exported['filterConfig']['offline_filter']=='baseline_lowpass'
-    assert exported['raw']==raw and exported['respiratoryBins']
+    assert exported['raw']==raw and stored_bins(exported)
     page.locator('#analysis-basis').select_option('amplitude');wait_ready(page)
     assert page.locator('#analysis-bandHigh').is_visible()
     page.locator('#analysis-basis').select_option('time');wait_ready(page)
