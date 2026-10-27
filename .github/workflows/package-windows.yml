@@ -1,0 +1,102 @@
+name: Package Windows desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'codex/release-*'
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: '1'
+      UV_DEFAULT_INDEX: https://pypi.org/simple
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --python 3.13
+
+      - name: Run unit and integration tests
+        run: uv run --frozen pytest tests/unit tests/integration -q
+
+      - name: Build windowed executable
+        run: uv run --frozen --with "pyinstaller==6.16.0" python scripts/packaging/build_exe.py
+
+      - name: Check executable
+        shell: pwsh
+        run: |
+          # PE subsystem 2 means a GUI application with no console window.
+          $bytes = [IO.File]::ReadAllBytes("$PWD/dist/RespiraScope.exe")
+          $pe = [BitConverter]::ToInt32($bytes, 0x3c)
+          $subsystem = [BitConverter]::ToUInt16($bytes, $pe + 24 + 68)
+          if ($subsystem -ne 2) { throw "Expected Windows GUI subsystem, got $subsystem" }
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP/respirascope-smoke"
+          $process = Start-Process ./dist/RespiraScope.exe -ArgumentList '--help' -PassThru
+          if (-not $process.WaitForExit(60000)) {
+            Stop-Process -Id $process.Id -Force
+            throw "Executable startup timed out"
+          }
+          if ($process.ExitCode -ne 0) { throw "Executable failed: $($process.ExitCode)" }
+          $log = Get-ChildItem "$env:LOCALAPPDATA/RespiraScope/logs/*.log" | Select-Object -First 1
+          if (-not $log -or -not (Select-String -Path $log.FullName -SimpleMatch '--config' -Quiet)) {
+            throw "Executable did not reach the application entry point"
+          }
+
+      - name: Create release archive
+        id: archive
+        shell: pwsh
+        run: |
+          $version = uv run --frozen python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+          $name = "RespiraScope-$version-windows-x64"
+          $folder = "dist/release/$name"
+          New-Item -ItemType Directory -Path $folder -Force | Out-Null
+          Copy-Item dist/RespiraScope.exe, LICENSE -Destination $folder
+          @"
+          RespiraScope $version / Windows x64
+          Commit: ${{ github.sha }}
+
+          Run RespiraScope.exe to open the desktop application.
+          Microsoft Edge WebView2 Runtime is required.
+          Config: %LOCALAPPDATA%/RespiraScope/config/breath.toml
+          Logs: %LOCALAPPDATA%/RespiraScope/logs/
+          Save records before closing the application.
+          This build is not code-signed.
+          "@ | Set-Content "$folder/README.txt" -Encoding utf8
+          Compress-Archive -Path $folder -DestinationPath "dist/release/$name.zip"
+          $hash = (Get-FileHash "dist/release/$name.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name.zip" | Set-Content dist/release/SHA256SUMS.txt -Encoding ascii
+          "name=$name" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.name }}
+          path: |
+            dist/release/*.zip
+            dist/release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload startup diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-startup-logs
+          path: ${{ runner.temp }}/respirascope-smoke/RespiraScope/logs/
+          if-no-files-found: ignore

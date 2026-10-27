@@ -108,3 +108,15 @@ experiments and superseded overview charts are no longer part of this workflow.
 span change against the clean base signal. `reports/raw_comparison_metrics.py` retains
 the observed-input comparison in the measurement JSON. Their tests live in
 `tests/unit/`; neither module is used by the running application.
+
+## Windows builds on GitHub Actions
+
+`.github/workflows/package-windows.yml` builds the Windows x64 desktop executable
+on `windows-2022`. It runs unit/integration tests, checks the GUI executable entry
+point, then uploads a versioned ZIP and SHA-256 checksum as an Actions artifact
+(retained for 30 days). It does not publish a GitHub Release or deploy the server.
+
+Triggers: manual dispatch, a `v*` tag, or a `codex/release-*` branch push. A release
+branch can build without pushing to `main`, whose separate workflow deploys the
+cloud server. The ZIP contains the executable, license and startup instructions;
+Windows requires WebView2 Runtime. The binary is not code-signed.
