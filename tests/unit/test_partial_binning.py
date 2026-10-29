@@ -67,3 +67,33 @@ def test_fixed_never_interpolates_across_gap_or_nonfinite_sample():
     assert all(b['end']<=75 for b in bins)
     source=triangle();source['filtered'][76][1]=float('nan')
     assert all(b['end']<=75 for b in compute(source))
+
+
+@pytest.mark.parametrize('options', [TIME, FIXED, {**FIXED, 'amplitudeMode':'free'}])
+@pytest.mark.parametrize('invert', [False, True])
+def test_missing_peak_valley_pair_does_not_bridge_a_full_breath(options, invert):
+    from ct_breath.binning.data import build_binning_data
+    points = [[i, 50-abs(i%100-50)] for i in range(201)]
+    if invert:
+        points = [[x,50-y] for x,y in points]
+    source = {'filtered':points, 'peaks':[points[150]], 'valleys':[points[0],points[200]]}
+    if invert:
+        source['peaks'],source['valleys'] = source['valleys'],source['peaks']
+    bins = compute(source,options)
+    assert bins and all(b['start']>=150 for b in bins)
+    result = build_binning_data(points,bins,[],options,0,200)
+    assert result['unassigned']==[[0,150]]
+    assert result['excluded']=={'quality':[], 'range':[]}
+    # Restoring the missing pair restores all four half breaths.
+    source['peaks'].append(points[100 if invert else 50])
+    source['valleys'].append(points[50 if invert else 100])
+    restored = compute(source,options)
+    assert len(restored)==20
+    assert build_binning_data(points,restored,[],options,0,200)['unassigned']==[]
+
+
+def test_small_local_reversal_does_not_discard_a_measured_half_breath():
+    source=triangle()
+    source['filtered'][25][1]=23
+    bins=compute(source,TIME)
+    assert len(bins)==5 and bins[0]['start']==0 and bins[-1]['end']==50

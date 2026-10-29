@@ -32,6 +32,18 @@ def clear_leg(points, threshold, min_span):
     return distance >= threshold and distance >= .9*variation
 
 
+def consistent_direction(points, rising, threshold):
+    """Reject a missing pair of turns, allowing small local fluctuations."""
+    sign = 1 if rising else -1
+    best = sign*points[0][1]
+    for _, value in points[1:]:
+        value *= sign
+        best = max(best, value)
+        if best-value >= threshold:
+            return False
+    return True
+
+
 def missing_turn(points, left, right, kind, threshold, min_span):
     """Recover one observed turn only when both sides have a clear direction."""
     values = [p[1] for p in points[left:right+1]]
@@ -90,8 +102,10 @@ def binning_segments(data, events, invalid, gap, fixed, sampling_rate):
             if kind == next_kind or b <= a:
                 continue
             rising = kind == 'valley'
-            if points[b][1] != points[a][1] and (points[b][1] > points[a][1]) == rising:
-                yield points[a:b+1], rising
+            segment = points[a:b+1]
+            if (points[b][1] != points[a][1] and (points[b][1] > points[a][1]) == rising
+                    and consistent_direction(segment, rising, threshold)):
+                yield segment, rising
         if fixed:
             a,kind = recovered[-1]
             segment = edge_leg(points,a,1,kind,threshold,min_span)

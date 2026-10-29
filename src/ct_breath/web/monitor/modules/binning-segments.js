@@ -1,4 +1,4 @@
-// Keep in sync with breath_process/binning_segments.py. These helpers neither
+// Keep in sync with ct_breath/binning/segments.py. These helpers neither
 // synthesize samples nor change the public peak/valley annotations.
 function* continuousRuns(data, invalid, gap) {
   let current = [];
@@ -23,6 +23,18 @@ function clearLeg(points, threshold, minSpan) {
   let variation=0;
   for(let i=1;i<points.length;i++) variation+=Math.abs(points[i][1]-points[i-1][1]);
   return distance>=threshold && distance>=.9*variation;
+}
+
+function consistentDirection(points, rising, threshold) {
+  // Missing pairs of turns must not turn a whole breath into one direction.
+  const sign=rising?1:-1;
+  let best=sign*points[0][1];
+  for(let i=1;i<points.length;i++) {
+    const value=sign*points[i][1];
+    best=Math.max(best,value);
+    if(best-value>=threshold) return false;
+  }
+  return true;
 }
 
 function missingTurn(points, left, right, kind, threshold, minSpan) {
@@ -72,7 +84,9 @@ export function* binningSegments(data, events, invalid, gap, fixed, samplingRate
       const [a,kind]=recovered[i], [b,nextKind]=recovered[i+1];
       if(kind===nextKind || b<=a) continue;
       const rising=kind==='valley';
-      if(points[b][1]!==points[a][1] && (points[b][1]>points[a][1])===rising) yield [points.slice(a,b+1),rising];
+      const segment=points.slice(a,b+1);
+      if(points[b][1]!==points[a][1] && (points[b][1]>points[a][1])===rising &&
+          consistentDirection(segment,rising,threshold)) yield [segment,rising];
     }
     if(fixed) {
       const [a,kind]=recovered.at(-1);

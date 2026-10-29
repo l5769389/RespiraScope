@@ -1138,11 +1138,11 @@ BPM 和呼吸稳定性指标。
 | 记录时间 | `record_time` | `startTime` / `endTime`，ISO 8601 |
 | 扫描范围 | `scans`，snake_case 字段 | `scans`，`index/startSeq/endSeq/startTime/endTime`；仅自动结束时添加 `autoClosed: true` |
 | 滤波参数和状态 | `filter_config` / `filter_status` | `filterConfig` / `filterStatus`；两种分箱共用一份参数 |
-| 分箱 | 接口提供的分析结果 | `analysis` 保存方式、上下限与 `totalBins`，`binningData` v4 包含 `inhaleRising`、`bins.inhale/exhale`、按分类保存的 `excluded/unassigned` 区间数组；各区间索引对应完整 filtered 数组，每方向 N = totalBins / 2 箱 |
+| 分箱 | 接口提供的分析结果 | `analysis` 保存方式、上下限与 `totalBins`，`binningData` v5 包含 `inhaleRising`、`bins.inhale/exhale`、`excluded.quality/range` 两组排除区间及 `unassigned` 未分箱区间；各区间索引对应完整 filtered 数组，每方向 N = totalBins / 2 箱 |
 | 离线质量 | `processingQuality` | 原样保留无效区间、基线估计状态与偏移量；旧文件可缺省 |
 | 摘要和逐点标签 | `metrics`、`segments` 等 | 不保存，通过序号和记录/扫描范围推算 |
 
-`raw` 和 `filtered` 包含前后缓冲点，`startSeq` 至 `endSeq`（含端点）才是用户真实记录范围。分箱区间使用 `[start,end)`，只覆盖真实记录范围。固定幅值分箱的边界为 `lower + i * (upper - lower) / N`（`i=0..N`，`N=totalBins/2`），未到达的箱不写区间。波形和时间只保存一份。分箱不再依赖前后半组的隐含方向；仅区分有效、排除、无法分箱；有效数据在 `bins` 中，后两类分别使用区间数组，不携带原因。同类相邻或重叠区间已合并，不同分类互不重叠。子协议字段示例见 [分箱数据明细](../development/architecture-zh.md#分箱数据明细与精简存储)。
+`raw` 和 `filtered` 包含前后缓冲点，`startSeq` 至 `endSeq`（含端点）才是用户真实记录范围。分箱区间使用 `[start,end)`，只覆盖真实记录范围。固定幅值分箱的边界为 `lower + i * (upper - lower) / N`（`i=0..N`，`N=totalBins/2`），未到达的箱不写区间。波形和时间只保存一份。分箱不再依赖前后半组的隐含方向；仅区分已分箱、排除、未分箱；已分箱数据在 `bins` 中，排除区间按 `excluded.quality`（质量无效）和 `excluded.range`（固定幅值超界）分别保存，重叠部分归入 `quality`，不携带具体异常原因。等于上下界不排除；`unassigned` 表示未被排除但尚未分配箱号。同类相邻或重叠区间已合并，不同分类互不重叠。子协议字段示例见 [分箱数据明细](../development/architecture-zh.md#分箱数据明细与精简存储)。
 
 原有时间戳保留；缺失的点时间戳不补造。固定幅值峰谷高于上限时附加 `amplitudeRange: "above"`，低于下限时为 `"below"`；界内或非固定幅值不添加此字段。
 

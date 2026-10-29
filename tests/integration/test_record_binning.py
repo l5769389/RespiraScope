@@ -51,7 +51,7 @@ def test_saved_record_contains_bins_bounds_and_extremum_flags(tmp_path):
     assert payload['peaks'][0] == {'sequence':50,'value':50,'amplitudeRange':'above'}
     assert all(p['amplitudeRange']=='below' for p in payload['valleys'])
     assert payload['analysis']['lower']==10
-    assert payload['binningData']['version']==4
+    assert payload['binningData']['version']==5
     assert set(payload['binningData'])=={'version','inhaleRising','bins','excluded','unassigned'}
     assert 'respiratoryBins' not in payload
     assert len(payload['binningData']['bins']['inhale'])==len(payload['binningData']['bins']['exhale'])==5

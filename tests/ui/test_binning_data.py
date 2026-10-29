@@ -1,11 +1,13 @@
 import json
+import pytest
 
 from ct_breath.binning.data import build_binning_data, build_binning_timeline
 from ct_breath.binning.respiratory import build_respiratory_bins
 from test_record_analysis import wait_ready
 
 
-def test_binning_details_match_export_and_backend(page, ui_server, tmp_path):
+@pytest.mark.parametrize("legacy_version", [3,4])
+def test_binning_details_match_export_and_backend(page, ui_server, tmp_path, legacy_version):
     errors=[]
     page.on('pageerror', lambda error: errors.append(str(error)))
     points=[[i,i if i<=50 else 100-i] for i in range(101)]
@@ -15,6 +17,8 @@ def test_binning_details_match_export_and_backend(page, ui_server, tmp_path):
              'processingQuality':quality,'analysis':options,'startSeq':0,'endSeq':100,'filterStatus':'offline',
              'filterConfig':{'offline_filter':'baseline_lowpass','highpass_cutoff':2,'sampling_rate':50},
              'binningData':{'version':3,'inhaleRising':True,'bins':{'inhale':[[]]*5,'exhale':[[]]*5},'excluded':{'motion':[[0,100]]},'unassigned':{}}}
+    if legacy_version==4:
+        fixture['binningData']={'version':4,'inhaleRising':True,'bins':{'inhale':[[]]*5,'exhale':[[]]*5},'excluded':[[0,100]],'unassigned':[]}
     source=tmp_path/'binning.json';source.write_text(json.dumps(fixture))
     page.goto(ui_server['ui']+'/monitor/')
     page.locator('#loadRecordInput').set_input_files(source)
@@ -22,16 +26,25 @@ def test_binning_details_match_export_and_backend(page, ui_server, tmp_path):
     page.locator('#binningDataBtn').click()
     assert page.locator('#binningDataDialog').is_visible()
     assert page.locator('.binning-data-summary article').count()==3
+    assert '已分箱' in page.locator('#binningDataSummary').inner_text()
+    assert '未分箱' in page.locator('#binningDataSummary').inner_text()
+    assert '无法分箱' not in page.locator('#binningDataDialog').inner_text()
     page.locator('#binningStatusFilter').select_option('excluded')
-    assert page.locator('#binningDataRows tr').count()==1
+    assert page.locator('#binningDataRows tr').count()==4
     assert '排除' in page.locator('#binningDataRows').inner_text()
+    page.locator('#binningStatusFilter').select_option('quality')
+    assert page.locator('#binningDataRows tr').count()==1
+    assert '质量无效' in page.locator('#binningDataRows').inner_text()
+    page.locator('#binningStatusFilter').select_option('range')
+    assert page.locator('#binningDataRows tr').count()==3
+    assert '幅值超界' in page.locator('#binningDataRows').inner_text()
     page.locator('#binningJsonTab').click()
     visible=json.loads(page.locator('#binningDataJson').inner_text())
-    assert set(visible)=={'version','inhaleRising','bins','excluded','unassigned'} and visible['version']==4
+    assert set(visible)=={'version','inhaleRising','bins','excluded','unassigned'} and visible['version']==5
     assert set(visible['bins'])=={'inhale','exhale'}
     assert len(visible['bins']['inhale'])==len(visible['bins']['exhale'])==5
     assert visible['inhaleRising'] is True
-    assert visible['excluded']==[[70,80]]
+    assert visible['excluded']=={'quality':[[70,80]],'range':[[0,10],[41,60],[91,100]]}
     assert isinstance(visible['unassigned'],list) and visible['unassigned']
     assert page.locator('#binningDataHead th').count()==4
     assert page.locator('#binningReasonLegend').count()==0
@@ -93,6 +106,15 @@ def test_browser_merges_status_ranges_like_backend(page, ui_server):
          'options':{'basis':'amplitude','amplitudeMode':'fixed','lower':5,'upper':15},
          'start':0,'end':30},
     ]
+    for values in [[0,5,15,20,0],[20,15,5,0,20]]:
+        cases.append({'filtered':list(enumerate(values)),
+            'bins':[{'start':0,'end':4,'direction':'inhale','bin':1}],
+            'invalid':[{'start':2,'end':3}],
+            'options':{'basis':'amplitude','amplitudeMode':'fixed','lower':5,'upper':15},
+            'start':1,'end':4})
+    cases.append({'filtered':[[i,i] for i in range(21)],'bins':[],
+        'invalid':[{'start':3,'end':7},{'start':6,'end':10}],
+        'options':{'basis':'amplitude','amplitudeMode':'fixed','lower':5,'upper':15},'start':0,'end':20})
     for case in cases:
         actual=page.evaluate('''async c=>{
           const {buildBinningTimeline,compactBinningData}=await import('./modules/binning-data.js');
@@ -101,3 +123,15 @@ def test_browser_merges_status_ranges_like_backend(page, ui_server):
         }''',case)
         assert actual['timeline']==build_binning_timeline(**case)
         assert actual['data']==build_binning_data(**case)
+
+
+def test_invalid_fixed_bounds_are_not_silently_classified(page, ui_server):
+    page.goto(ui_server['ui']+'/monitor/')
+    for lower, upper in [(5,5),(10,5),(None,5)]:
+        message=page.evaluate('''async ([lower,upper])=>{
+          const {buildBinningTimeline}=await import('./modules/binning-data.js');
+          try {buildBinningTimeline([[0,0],[1,1]],[],[],
+            {basis:'amplitude',amplitudeMode:'fixed',lower,upper},0,1);return null;}
+          catch(error){return error.message;}
+        }''',[lower,upper])
+        assert 'lower < upper' in message

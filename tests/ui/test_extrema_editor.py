@@ -50,7 +50,7 @@ def test_manual_extrema_preview_cancel_confirm_and_roundtrip(page, ui_server, tm
     assert [p['sequence'] for p in result['valleys']] == [0,100]
     assert result['filtered'] == original['filtered']
     assert result['processingQuality'] == original['processingQuality']
-    assert result['binningData']['excluded'] == [[70,80]]
+    assert result['binningData']['excluded'] == {'quality':[[70,80]],'range':[]}
     assert result['extremaEdits']['automatic']['valleys'] == [0]
     page.locator('#loadRecordInput').set_input_files(saved)
     page.locator('#extrema-edit').click()
@@ -140,5 +140,44 @@ def test_fixed_amplitude_edits_preserve_exclusions_and_bounds(page, ui_server, t
     _, after=save(page,tmp_path,'fixed-after.json')
     assert before['filterConfig']==after['filterConfig']
     assert before['analysis']==after['analysis']
-    assert after['binningData']['excluded']==[[70,80]]
-    assert all(any(a<=point<b for a,b in after['binningData']['unassigned']) for point in (0,99))
+    assert after['binningData']['excluded']==before['binningData']['excluded']
+    assert after['binningData']['excluded']=={'quality':[[70,80]],'range':[[0,10],[41,60],[91,100]]}
+    assert all(any(a<=point<b for a,b in after['binningData']['excluded']['range']) for point in (0,99))
+    assert not any(a<=point<b for point in (0,99) for a,b in after['binningData']['unassigned'])
+
+
+def test_deleting_pair_marks_cross_cycle_interval_unassigned(page, ui_server, tmp_path):
+    points=[[i,50-abs(i%100-50)] for i in range(201)]
+    fixture={'version':6,'raw':points,'filtered':points,'peaks':[points[50],points[150]],
+             'valleys':[points[0],points[100],points[200]], 'startSeq':0,'endSeq':200,
+             'filterStatus':'offline','analysis':{'basis':'time','totalBins':10,'inhaleRising':True},
+             'filterConfig':{'offline_filter':'baseline_lowpass','highpass_cutoff':2,'sampling_rate':50}}
+    path=tmp_path/'two-breaths.json';path.write_text(json.dumps(fixture))
+    page.goto(ui_server['ui']+'/monitor/')
+    page.locator('#loadRecordInput').set_input_files(path)
+    page.locator('#extrema-edit').click()
+    for sequence in [50,100]:
+        place(page,sequence)
+        page.keyboard.press('Delete')
+    page.locator('#extrema-confirm').click()
+    edited_path,edited=save(page,tmp_path,'missing-pair.json')
+    assert edited['binningData']['unassigned']==[[0,150]]
+    assert edited['binningData']['excluded']=={'quality':[],'range':[]}
+    assert not any(edited['binningData']['bins']['inhale'])
+    assert all(edited['binningData']['bins']['exhale'])
+    page.locator('#binningDataBtn').click()
+    page.locator('#binningStatusFilter').select_option('unassigned')
+    assert '0 – 150' in page.locator('#binningDataRows').inner_text()
+    page.keyboard.press('Escape')
+    page.locator('#recordChart').screenshot(path=str(tmp_path/'missing-pair.png'))
+    # Saving/reloading preserves the classification; re-adding both marks repairs it.
+    page.locator('#loadRecordInput').set_input_files(edited_path)
+    _,reloaded=save(page,tmp_path,'reloaded-pair.json')
+    assert reloaded['binningData']==edited['binningData']
+    page.locator('#extrema-edit').click()
+    for sequence in [50,100]:
+        place(page,sequence)
+    page.locator('#extrema-confirm').click()
+    _,restored=save(page,tmp_path,'restored-pair.json')
+    assert restored['binningData']['unassigned']==[]
+    assert all(len(intervals)==2 for direction in restored['binningData']['bins'].values() for intervals in direction)
